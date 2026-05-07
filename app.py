@@ -99,7 +99,7 @@ with st.expander("📥 Télécharger le modèle de fichier DSMP"):
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
     except FileNotFoundError:
-        st.error("❌ Le fichier 'modele_dsmp.xlsx' est introuvable dans le dossier de l'application.")
+        st.error("❌ Le fichier 'modele_dsmp.xlsx' est introuvable.")
 
 #-------------------------------------
 # UPLOAD DU FICHIER EXCEL
