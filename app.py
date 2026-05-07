@@ -82,6 +82,25 @@ st.markdown("""
 st.title("DSMP – Outil de Reporting des Systèmes de Paiement")
 st.write("Analyse automatique des flux ACP/ACH et RTGS à partir du fichier Excel annuel.")
 
+#################################################
+# telechargement du fichier d'aide 
+################################################
+st.markdown("### 🆘 Aide")
+
+with st.expander("📥 Télécharger le modèle de fichier DSMP"):
+    st.write("Téléchargez le fichier modèle pour remplir les données conformément au format attendu.")
+
+    try:
+        with open("modele_dsmp.xlsx", "rb") as f:
+            st.download_button(
+                label="📄 Télécharger le fichier modèle",
+                data=f.read(),
+                file_name="modele_dsmp.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+    except FileNotFoundError:
+        st.error("❌ Le fichier 'modele_dsmp.xlsx' est introuvable dans le dossier de l'application.")
+
 #-------------------------------------
 # UPLOAD DU FICHIER EXCEL
 #-------------------------------------
