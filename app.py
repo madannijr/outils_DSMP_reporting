@@ -4,6 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from auth import check_auth
+from fonctions_utils import format_dataframe
+
 
 check_auth()
 
@@ -152,7 +154,12 @@ with tab1:
     df = df[df["Instrument"] != "TOTAL"]
 
     st.subheader("Tableau des indicateurs")
-    st.dataframe(df)
+    #st.dataframe(df)
+    df_affichage = format_dataframe(df)
+    st.dataframe(df_affichage)
+
+   
+
 
     instruments = df["Instrument"]
     x = np.arange(len(instruments))
@@ -233,7 +240,9 @@ with tab2:
     df["Part_Valeur"] = df["Valeur"] / total_valeur * 100
 
     st.subheader("Tableau des parts de marché")
-    st.dataframe(df)
+    #st.dataframe(df)
+    df_affichage = format_dataframe(df)
+    st.dataframe(df_affichage)
 
     #-------------------------------------
     # DONUT CHART (TOP 5 + AUTRES)
@@ -322,7 +331,9 @@ with tab3:
     st.subheader("Tableau des rejets par instrument")
 
     # Affichage du DataFrame nettoyé
-    st.dataframe(df_rejets_impayes)
+    #st.dataframe(df_rejets_impayes)
+    df_affichage = format_dataframe(df)
+    st.dataframe(df_affichage)
 
     # -------------------------------------
     # GRAPHIQUE COMPARATIF (CHÈQUES vs VIREMENTS)
@@ -620,7 +631,9 @@ with tab5:
     # 7) AFFICHAGE DU TABLEAU
     # -----------------------------------------------------
     st.subheader(f"Évolution Mensuelle RTGS ({annee_A} vs {annee_B})")
-    st.dataframe(df_var_rtgs)
+    #st.dataframe(df_var_rtgs)
+    df_affichage = format_dataframe(df_var_rtgs)
+    st.dataframe(df_affichage)
 
     # -----------------------------------------------------
     # 8) GRAPHIQUE
@@ -738,7 +751,10 @@ with tab6:
     # 8) AFFICHAGE DU TABLEAU
     # -----------------------------------------------------
     st.subheader(f"Tableau – Répartition par devise de règlement ({annee})")
-    st.dataframe(df_devise)
+    #st.dataframe(df_devise)
+    df_affichage = format_dataframe(df_devise)
+    st.dataframe(df_affichage)
+
 
     # -----------------------------------------------------
     # 9) GRAPHIQUE DONUT AVEC LÉGENDE
@@ -854,6 +870,8 @@ with tab7:
     # 5) TABLEAU
     # -----------------------------------------------------
     st.subheader(f"Tableau – Contribution SNP ({annee1}–{annee2})")
+    #st.dataframe(df_snp)
+    df_affichage = format_dataframe(df_devise)
     st.dataframe(df_snp)
 
     # -----------------------------------------------------
