@@ -260,22 +260,38 @@ with tab1:
     # Affichage du graphique final
     st.pyplot(fig)
 
+
 # =========================================================
 # 2) ONGLET : PARTS DE MARCHÉ
 # =========================================================
 with tab2:
 
+    # -----------------------------------------------------
+    # TITRE PRINCIPAL DE L’ONGLET
+    # -----------------------------------------------------
     st.header("Parts de Marché par Instrument")
 
-    # Choix de l’instrument
+    # -----------------------------------------------------
+    # CHOIX DE L’INSTRUMENT (Chèques ou Virements)
+    # -----------------------------------------------------
+    # Permet à l’utilisateur de sélectionner l’instrument à analyser
     choix = st.selectbox("Choisir l’instrument :", ["Chèques", "Virements"])
 
-    # Choix du type de graphique
+    # -----------------------------------------------------
+    # CHOIX DU TYPE DE VISUEL (Barres ou Pareto)
+    # -----------------------------------------------------
+    # Deux types de graphiques disponibles pour visualiser les parts
     type_graph = st.selectbox("Type de visuel :", ["Barres horizontales", "Pareto"])
 
-    # Chargement des données
+    # -----------------------------------------------------
+    # LECTURE DU FICHIER EXCEL (feuille ACP/ACH)
+    # -----------------------------------------------------
+    # On charge la feuille contenant les données par banque
     df_banque = pd.read_excel(uploaded_file, sheet_name="Evolution par Banque ACPACH")
 
+    # -----------------------------------------------------
+    # RENOMMAGE DES COLONNES POUR SIMPLIFIER LES TRAITEMENTS
+    # -----------------------------------------------------
     df_banque.columns = [
         "N", "Banque",
         "Chq_Nombre", "Chq_Montant",
@@ -284,39 +300,64 @@ with tab2:
         "Total_Nombre", "Total_Montant"
     ]
     
-    # Sélection selon l’instrument
+    # -----------------------------------------------------
+    # SÉLECTION DES COLONNES SELON L’INSTRUMENT CHOISI
+    # -----------------------------------------------------
+    # Si l’utilisateur choisit "Chèques", on prend les colonnes correspondantes
     if choix == "Chèques":
         df = df_banque[["Banque", "Chq_Nombre", "Chq_Montant"]].copy()
         df.columns = ["Banque", "Volume", "Valeur"]
+    # Sinon, on prend les colonnes des virements
     else:
         df = df_banque[["Banque", "Vir_Nombre", "Vir_Montant"]].copy()
         df.columns = ["Banque", "Volume", "Valeur"]
 
-    # Suppression de la ligne TOTAL
+    # -----------------------------------------------------
+    # SUPPRESSION DE LA LIGNE "TOTAL" DU FICHIER EXCEL
+    # -----------------------------------------------------
+    # Cette ligne fausse les calculs de parts de marché
     df = df[df["Banque"] != "Total"]
 
-    # Nettoyage avancé
+    # -----------------------------------------------------
+    # NETTOYAGE DES DONNÉES (espaces, tirets, valeurs manquantes)
+    # -----------------------------------------------------
     for col in ["Volume", "Valeur"]:
         df[col] = (
             df[col].astype(str)
-            .str.replace(" ", "", regex=False)
-            .str.replace("—", "0", regex=False)
-            .str.replace("-", "0", regex=False)
+            .str.replace(" ", "", regex=False)   # Supprime les espaces
+            .str.replace("—", "0", regex=False)  # Remplace les tirets longs par 0
+            .str.replace("-", "0", regex=False)  # Remplace les tirets courts par 0
         )
+        # Conversion en numérique et remplacement des NaN par 0
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    df = df[df["Banque"].notna()]
-    df = df[df["Banque"] != ""]
-    df = df[df["Valeur"] > 0]
+    # -----------------------------------------------------
+    # SUPPRESSION DES LIGNES VIDES OU INVALIDES
+    # -----------------------------------------------------
+    df = df[df["Banque"].notna()]      # Supprime les lignes sans nom de banque
+    df = df[df["Banque"] != ""]        # Supprime les lignes vides
+    df = df[df["Valeur"] > 0]          # Supprime les lignes avec valeur nulle
 
-    # Calcul des parts de marché
-    total_valeur = df["Valeur"].sum()
-    df["Part_Valeur"] = df["Valeur"] / total_valeur * 100
+    # -----------------------------------------------------
+    # CALCUL DES PARTS DE MARCHÉ (EN %)
+    # -----------------------------------------------------
+    total_valeur = df["Valeur"].sum()  # Somme totale des montants
+    # Calcul correct : proportion (0.1937 pour 19.37%)
+    df["Part_Valeur"] = df["Valeur"] / total_valeur
 
-    # Tri décroissant
+    # -----------------------------------------------------
+    # TRI DÉCROISSANT DES BANQUES PAR PART DE MARCHÉ
+    # -----------------------------------------------------
     df_sorted = df.sort_values("Part_Valeur", ascending=False)
 
-    # Affichage du tableau
+    # -----------------------------------------------------
+    # FORMATAGE POUR L’AFFICHAGE (conversion en %)
+    # -----------------------------------------------------
+    df_sorted["Part_Valeur"] = df_sorted["Part_Valeur"].apply(lambda x: f"{x*100:.2f}%")
+
+    # -----------------------------------------------------
+    # AFFICHAGE DU TABLEAU DANS STREAMLIT
+    # -----------------------------------------------------
     st.subheader("Tableau des parts de marché")
     df_affichage = format_dataframe(df_sorted)
     st.dataframe(df_affichage)
@@ -328,18 +369,21 @@ with tab2:
 
         fig, ax = plt.subplots(figsize=(7, 4))
 
-        ax.barh(df_sorted["Banque"], df_sorted["Part_Valeur"], color="#1F77B4")
+        # Barres horizontales représentant la part de marché
+        ax.barh(df_sorted["Banque"], df_sorted["Part_Valeur"].str.replace("%", "").astype(float), color="#1F77B4")
 
+        # Titre et étiquettes
         ax.set_xlabel("Part de marché (%)")
         ax.set_title(f"Parts de Marché {choix} (en Valeur)", fontweight="bold")
 
+        # Style visuel épuré
         ax.set_facecolor("#F8F9F9")
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
 
-        # Ajout des pourcentages
-        for i, v in enumerate(df_sorted["Part_Valeur"]):
-            ax.text(v + 0.3, i, f"{v:.1f}%", va="center", fontsize=8)
+        # Ajout des pourcentages à droite des barres
+        for i, v in enumerate(df_sorted["Part_Valeur"].str.replace("%", "").astype(float)):
+            ax.text(v + 0.3, i, f"{v:.2f}%", va="center", fontsize=8)
 
         plt.tight_layout()
         st.pyplot(fig)
@@ -351,23 +395,26 @@ with tab2:
 
         fig, ax1 = plt.subplots(figsize=(7, 4))
 
-        # Barres individuelles
-        ax1.bar(df_sorted["Banque"], df_sorted["Part_Valeur"], color="#1F77B4", label="Part individuelle")
+        # Barres individuelles (part de chaque banque)
+        ax1.bar(df_sorted["Banque"], df_sorted["Part_Valeur"].str.replace("%", "").astype(float), color="#1F77B4", label="Part individuelle")
         ax1.set_ylabel("Part de marché (%)")
         ax1.set_xticklabels(df_sorted["Banque"], rotation=45, ha="right")
 
-        # Ligne cumulative
+        # Ligne cumulative (somme progressive des parts)
         ax2 = ax1.twinx()
-        ax2.plot(df_sorted["Banque"], df_sorted["Part_Valeur"].cumsum(), color="green", marker="o", label="Cumul (%)")
+        cumul = df_sorted["Part_Valeur"].str.replace("%", "").astype(float).cumsum()
+        ax2.plot(df_sorted["Banque"], cumul, color="green", marker="o", label="Cumul (%)")
         ax2.set_ylabel("Cumul des parts (%)")
 
-        # Légendes encadrées
+        # Légendes encadrées pour plus de lisibilité
         ax1.legend(loc="upper left", frameon=True, edgecolor="black", facecolor="white")
         ax2.legend(loc="upper right", frameon=True, edgecolor="black", facecolor="white")
 
+        # Titre du graphique
         plt.title(f"Concentration des parts de marché ({choix} en valeur)", fontweight="bold")
         plt.tight_layout()
         st.pyplot(fig)
+
 
 
 # =========================================================
