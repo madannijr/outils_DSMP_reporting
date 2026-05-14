@@ -5,22 +5,30 @@ import matplotlib.pyplot as plt
 import numpy as np
 from auth import check_auth
 from fonctions_utils import format_dataframe
+from analyse_trimestrielle import analyse_trimestrielle
+from analyse_semestrielle import analyse_semestrielle
 
 
+
+# Auttentification
 check_auth()
-# ============================
-# AUTHENTIFICATION DSMP
-# ============================
-
+# ============================================================
+# 🔹 Fonction utilitaire : extraire une année dans un texte
+# ============================================================
 def extraire_annee(texte):
     match = re.search(r"\d{4}", str(texte))
     return int(match.group()) if match else None
 
-#-------------------------------------
-# CONFIGURATION DE LA PAGE STREAMLIT
-#-------------------------------------
+
+# ============================================================
+# 🔹 CONFIGURATION DE LA PAGE STREAMLIT
+# ============================================================
 st.set_page_config(page_title="DSMP – Outil de Reporting", layout="wide")
+
+# Logo BCRG
 st.image("BCRG_LOGO.png", width=120)
+
+# Bandeau DSMP
 st.markdown("""
 <div style="
     background-color:#004d40;
@@ -38,80 +46,179 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-
-
-##########################################################""
+# ============================================================
+# 🔹 STYLE CSS PERSONNALISÉ
+# ============================================================
 st.markdown("""
 <style>
-
-    /* Titres */
-    h1, h2, h3 {
-        color: #0b3d2e;
-        font-weight: 700;
-    }
-
-    /* Texte */
-    p, label, span {
-        font-size: 15px !important;
-    }
-
-    /* Onglets */
+    h1, h2, h3 { color: #0b3d2e; font-weight: 700; }
+    p, label, span { font-size: 15px !important; }
     .stTabs [data-baseweb="tab"] {
-        font-size: 15px;
-        font-weight: 600;
-        color: #ffffff;
-        background-color: #00695c;
-        border-radius: 5px;
-        padding: 8px 12px;
+        font-size: 15px; font-weight: 600; color: #ffffff;
+        background-color: #00695c; border-radius: 5px; padding: 8px 12px;
     }
-
-    .stTabs [data-baseweb="tab"]:hover {
-        background-color: #004d40;
-    }
-
-    /* DataFrames */
-    .dataframe {
-        font-size: 14px;
-    }
-
+    .stTabs [data-baseweb="tab"]:hover { background-color: #004d40; }
+    .dataframe { font-size: 14px; }
 </style>
 """, unsafe_allow_html=True)
 
 
-# Titre principal de l'application
+# ============================================================
+# 🔹 TITRE PRINCIPAL DE L’APPLICATION
+# ============================================================
 st.title("DSMP – Outil de Reporting des Systèmes de Paiement")
-st.write("Analyse automatique des flux ACP/ACH et RTGS à partir du fichier Excel annuel.")
+st.write("Analyse automatique des flux ACP/ACH, RTGS, Trimestriels, Semestriels et Annuels.")
 
-#################################################
-# telechargement du fichier d'aide 
-################################################
-st.markdown("### 🆘 Aide")
 
-with st.expander("📥 Télécharger le modèle de fichier DSMP"):
-    st.write("Téléchargez le fichier modèle pour remplir les données conformément au format attendu.")
+# ============================================================
+# 🔹 MENU PRINCIPAL DANS LA SIDEBAR
+# ============================================================
+st.sidebar.title("📌 Choisir une analyse")
 
-    try:
-        with open("modele_dsmp.xlsx", "rb") as f:
-            st.download_button(
-                label="📄 Télécharger le fichier modèle",
-                data=f.read(),
-                file_name="modele_dsmp.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-    except FileNotFoundError:
-        st.error("❌ Le fichier 'modele_dsmp.xlsx' est introuvable.")
+menu_principal = st.sidebar.radio(
+    "Type d'analyse",
+    ["Analyse Trimestrielle", "Analyse Semestrielle", "Analyse Annuelle"]
+)
 
-#-------------------------------------
-# UPLOAD DU FICHIER EXCEL
-#-------------------------------------
-uploaded_file = st.file_uploader("Importer le fichier Excel DSMP", type=["xlsx"])
 
-if not uploaded_file:
+# ============================================================
+# 🔹 ANALYSE TRIMESTRIELLE (T1 → T4)
+# ============================================================
+if menu_principal == "Analyse Trimestrielle":
+
+    # Grand titre global
+    st.markdown(
+        """
+        <h1 style='text-align: center; color: #00BFFF; margin-top:20px;'>
+            🧮 Analyse des flux trimestriels
+        </h1>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # Choix du type de flux
+    type_flux = st.radio(
+        "Choisir le type de flux à analyser",
+        ["ACP/ACH", "RTGS"],
+        horizontal=True
+    )
+
+    # Choix du trimestre
+    sous_menu = st.sidebar.radio(
+        "Choisir le trimestre",
+        ["T1", "T2", "T3", "T4"]
+    )
+
+    # Titre du bloc
+    st.header(f"📊 Analyse {sous_menu} {type_flux}")
+
+    # Upload du fichier trimestriel
+    fichier_trimestriel = st.file_uploader(
+        f"Importer le fichier {sous_menu} ({type_flux})",
+        type=["xlsx"]
+    )
+
+    # Lancer l’analyse ACP/ACH
+    if fichier_trimestriel and type_flux == "ACP/ACH":
+        analyse_trimestrielle(fichier_trimestriel)
+
+    # RTGS (en développement)
+    elif fichier_trimestriel and type_flux == "RTGS":
+        st.info("🔧 L’analyse RTGS sera bientôt disponible.")
+
     st.stop()
 
-#-------------------------------------
-# CREATION DES ONGLET PRINCIPAUX
-#-------------------------------------
+
+# ============================================================
+# 🔹 ANALYSE SEMESTRIELLE (S1 → S2)
+# ============================================================
+elif menu_principal == "Analyse Semestrielle":
+
+    # Grand titre global
+    st.markdown(
+        """
+        <h1 style='text-align: center; color: #00BFFF; margin-top:20px;'>
+            🧮 Analyse des flux semestriels
+        </h1>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # Choix du type de flux
+    type_flux = st.radio(
+        "Choisir le type de flux à analyser",
+        ["ACP/ACH", "RTGS"],
+        horizontal=True
+    )
+
+    # Choix du semestre
+    sous_menu = st.sidebar.radio(
+        "Choisir le semestre",
+        ["S1", "S2"]
+    )
+
+    st.header(f"📊 Analyse {sous_menu} {type_flux}")
+
+    # 🔥 S1 = T1 + T2
+    if sous_menu == "S1":
+        fichier_T1 = st.file_uploader(f"Importer le fichier T1 ({type_flux})", type=["xlsx"], key="T1")
+        fichier_T2 = st.file_uploader(f"Importer le fichier T2 ({type_flux})", type=["xlsx"], key="T2")
+
+        if fichier_T1 and fichier_T2 and type_flux == "ACP/ACH":
+            analyse_semestrielle(fichier_T1, fichier_T2)
+
+        elif fichier_T1 and fichier_T2 and type_flux == "RTGS":
+            st.info("🔧 L’analyse RTGS sera bientôt disponible.")
+
+        st.stop()
+
+    # 🔥 S2 = T3 + T4
+    if sous_menu == "S2":
+        fichier_T3 = st.file_uploader(f"Importer le fichier T3 ({type_flux})", type=["xlsx"], key="T3")
+        fichier_T4 = st.file_uploader(f"Importer le fichier T4 ({type_flux})", type=["xlsx"], key="T4")
+
+        if fichier_T3 and fichier_T4 and type_flux == "ACP/ACH":
+            analyse_semestrielle(fichier_T3, fichier_T4)
+
+        elif fichier_T3 and fichier_T4 and type_flux == "RTGS":
+            st.info("🔧 L’analyse RTGS sera bientôt disponible.")
+
+        st.stop()
+
+
+# ============================================================
+# 🔹 ANALYSE ANNUELLE (NE PAS MODIFIER)
+# ============================================================
+elif menu_principal == "Analyse Annuelle":
+
+    st.header("📊 Analyse Annuelle ACP/ACH")
+
+    st.markdown("### 🆘 Aide")
+
+    # Bloc de téléchargement du modèle DSMP
+    with st.expander("📥 Télécharger le modèle de fichier DSMP"):
+        try:
+            with open("modele_dsmp.xlsx", "rb") as f:
+                st.download_button(
+                    label="📄 Télécharger le fichier modèle",
+                    data=f.read(),
+                    file_name="modele_dsmp.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+        except FileNotFoundError:
+            st.error("❌ Le fichier 'modele_dsmp.xlsx' est introuvable.")
+
+    # Upload du fichier annuel
+    uploaded_file = st.file_uploader("Importer le fichier Excel DSMP (annuel)", type=["xlsx"], key="annuel")
+
+    if not uploaded_file:
+        st.info("Veuillez importer le fichier annuel pour afficher les analyses.")
+        st.stop()
+
+
+# ============================================================
+# 🔹 ONGLET DES ANALYSES ANNUELLES
+# ============================================================
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Évolution Globale ACP/ACH",
     "Parts de Marché",
@@ -119,8 +226,11 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Matrice de positionnement",
     "Analyse Global RTGS",
     "Répartition par devise de règlement (RTGS)",
-    "Contribution SNP"   
+    "Contribution SNP",
 ])
+
+
+
 
 # =========================================================
 # 1) ONGLET : ÉVOLUTION GLOBALE ACP/ACH
@@ -994,5 +1104,5 @@ with tab7:
     **Croissance :** {croissance:.2f} %  
     **Leader :** {top["Banque"]} ({top[f"Total_{annee2}"]/1e6:.0f} M GNF)
     """)
-
-
+    
+ 
