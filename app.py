@@ -11,7 +11,7 @@ from analyse_semestrielle import analyse_semestrielle
 
 
 # Auttentification
-check_auth()
+#check_auth()
 # ============================================================
 # 🔹 Fonction utilitaire : extraire une année dans un texte
 # ============================================================

@@ -201,8 +201,8 @@ def analyse_semestrielle(fichier_T1, fichier_T2):
     st.pyplot(fig2)
 
     # ============================================================
-    # 🔹 COMPARAISON TRIMESTRIELLE — T1 vs T2 (année la plus récente)
-    # ============================================================
+# 🔹 COMPARAISON TRIMESTRIELLE — T1 vs T2 (année la plus récente)
+# ============================================================
     st.subheader(f"📈 Analyse trimestrielle — T1 vs T2 ({annee2})")
 
     fig, ax1 = plt.subplots(figsize=(16, 6))
@@ -225,17 +225,42 @@ def analyse_semestrielle(fichier_T1, fichier_T2):
     ax1.set_xticks(x)
     ax1.set_xticklabels(df_graph["Banque"], rotation=45, ha="right")
 
-    # --- Légende simplifiée ---
+    # --- Légende simplifiée avec couleurs cohérentes ---
     from matplotlib.lines import Line2D
+
     legend_elements = [
-        Line2D([0], [0], marker='o', linestyle='-', linewidth=2, label='Volumes (T1/T2)'),
-        Line2D([0], [0], marker='s', linestyle='-', linewidth=2, label='Montants (T1/T2)')
+        Line2D(
+            [0], [0],
+            marker='o',
+            linestyle='-',
+            linewidth=2,
+            color='tab:blue',
+            markerfacecolor='tab:blue',
+            label='Volumes (T1/T2)'
+        ),
+        Line2D(
+            [0], [0],
+            marker='s',
+            linestyle='-',
+            linewidth=2,
+            color='tab:orange',
+            markerfacecolor='tab:orange',
+            label='Montants (T1/T2)'
+        )
     ]
-    ax1.legend(handles=legend_elements, loc="upper left")
+
+    ax1.legend(
+        handles=legend_elements,
+        loc="upper left",
+        frameon=True,
+        facecolor="white",
+        framealpha=0.8
+    )
 
     # --- Titre ---
     plt.title(f"Comparaison T1 vs T2 — Volumes & Montants ({annee2}) — {instrument.capitalize()}")
 
     ax1.grid(True, linestyle="--", alpha=0.5)
     st.pyplot(fig)
+
 
