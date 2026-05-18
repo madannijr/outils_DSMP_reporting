@@ -9,17 +9,6 @@ from analyse_trimestrielle import analyse_trimestrielle
 from analyse_semestrielle import analyse_semestrielle
 
 
-
-# Auttentification
-#check_auth()
-# ============================================================
-# 🔹 Fonction utilitaire : extraire une année dans un texte
-# ============================================================
-def extraire_annee(texte):
-    match = re.search(r"\d{4}", str(texte))
-    return int(match.group()) if match else None
-
-
 # ============================================================
 # 🔹 CONFIGURATION DE LA PAGE STREAMLIT
 # ============================================================
@@ -64,14 +53,30 @@ st.markdown("""
 
 
 # ============================================================
-# 🔹 TITRE PRINCIPAL DE L’APPLICATION
+# 🔹 TITRE PRINCIPAL
 # ============================================================
 st.title("DSMP – Outil de Reporting des Systèmes de Paiement")
 st.write("Analyse automatique des flux ACP/ACH, RTGS, Trimestriels, Semestriels et Annuels.")
 
 
 # ============================================================
-# 🔹 MENU PRINCIPAL DANS LA SIDEBAR
+# 🔹 INITIALISATION SESSION_STATE
+# ============================================================
+if "fichier_T1" not in st.session_state:
+    st.session_state.fichier_T1 = None
+
+if "fichier_T2" not in st.session_state:
+    st.session_state.fichier_T2 = None
+
+if "fichier_T3" not in st.session_state:
+    st.session_state.fichier_T3 = None
+
+if "fichier_T4" not in st.session_state:
+    st.session_state.fichier_T4 = None
+
+
+# ============================================================
+# 🔹 MENU PRINCIPAL
 # ============================================================
 st.sidebar.title("📌 Choisir une analyse")
 
@@ -82,76 +87,70 @@ menu_principal = st.sidebar.radio(
 
 
 # ============================================================
-# 🔹 ANALYSE TRIMESTRIELLE (T1 → T4)
+# 🔹 ANALYSE TRIMESTRIELLE
 # ============================================================
 if menu_principal == "Analyse Trimestrielle":
 
-    # Grand titre global
-    st.markdown(
-        """
+    st.markdown("""
         <h1 style='text-align: center; color: #00BFFF; margin-top:20px;'>
             🧮 Analyse des flux trimestriels
         </h1>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
 
-    # Choix du type de flux
     type_flux = st.radio(
         "Choisir le type de flux à analyser",
         ["ACP/ACH", "RTGS"],
         horizontal=True
     )
 
-    # Choix du trimestre
     sous_menu = st.sidebar.radio(
         "Choisir le trimestre",
         ["T1", "T2", "T3", "T4"]
     )
 
-    # Titre du bloc
     st.header(f"📊 Analyse {sous_menu} {type_flux}")
 
-    # Upload du fichier trimestriel
-    fichier_trimestriel = st.file_uploader(
+    # 🔥 Gestion session_state pour les fichiers trimestriels
+    key_map = {"T1": "fichier_T1", "T2": "fichier_T2", "T3": "fichier_T3", "T4": "fichier_T4"}
+
+    fichier = st.file_uploader(
         f"Importer le fichier {sous_menu} ({type_flux})",
-        type=["xlsx"]
+        type=["xlsx"],
+        key=f"upload_{sous_menu}"
     )
 
-    # Lancer l’analyse ACP/ACH
-    if fichier_trimestriel and type_flux == "ACP/ACH":
-        analyse_trimestrielle(fichier_trimestriel)
+    if fichier:
+        st.session_state[key_map[sous_menu]] = fichier
 
-    # RTGS (en développement)
-    elif fichier_trimestriel and type_flux == "RTGS":
+    # Si un fichier existe déjà → le réutiliser
+    fichier_charge = st.session_state[key_map[sous_menu]]
+
+    if fichier_charge and type_flux == "ACP/ACH":
+        analyse_trimestrielle(fichier_charge)
+
+    elif fichier_charge and type_flux == "RTGS":
         st.info("🔧 L’analyse RTGS sera bientôt disponible.")
 
     st.stop()
 
 
 # ============================================================
-# 🔹 ANALYSE SEMESTRIELLE (S1 → S2)
+# 🔹 ANALYSE SEMESTRIELLE
 # ============================================================
 elif menu_principal == "Analyse Semestrielle":
 
-    # Grand titre global
-    st.markdown(
-        """
+    st.markdown("""
         <h1 style='text-align: center; color: #00BFFF; margin-top:20px;'>
             🧮 Analyse des flux semestriels
         </h1>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
 
-    # Choix du type de flux
     type_flux = st.radio(
         "Choisir le type de flux à analyser",
         ["ACP/ACH", "RTGS"],
         horizontal=True
     )
 
-    # Choix du semestre
     sous_menu = st.sidebar.radio(
         "Choisir le semestre",
         ["S1", "S2"]
@@ -161,33 +160,39 @@ elif menu_principal == "Analyse Semestrielle":
 
     # 🔥 S1 = T1 + T2
     if sous_menu == "S1":
-        fichier_T1 = st.file_uploader(f"Importer le fichier T1 ({type_flux})", type=["xlsx"], key="T1")
-        fichier_T2 = st.file_uploader(f"Importer le fichier T2 ({type_flux})", type=["xlsx"], key="T2")
 
-        if fichier_T1 and fichier_T2 and type_flux == "ACP/ACH":
-            analyse_semestrielle(fichier_T1, fichier_T2)
+        fichier_T1 = st.file_uploader("Importer le fichier T1", type=["xlsx"], key="upload_T1_S1")
+        if fichier_T1:
+            st.session_state.fichier_T1 = fichier_T1
 
-        elif fichier_T1 and fichier_T2 and type_flux == "RTGS":
-            st.info("🔧 L’analyse RTGS sera bientôt disponible.")
+        fichier_T2 = st.file_uploader("Importer le fichier T2", type=["xlsx"], key="upload_T2_S1")
+        if fichier_T2:
+            st.session_state.fichier_T2 = fichier_T2
+
+        if st.session_state.fichier_T1 and st.session_state.fichier_T2:
+            analyse_semestrielle(st.session_state.fichier_T1, st.session_state.fichier_T2)
 
         st.stop()
 
     # 🔥 S2 = T3 + T4
     if sous_menu == "S2":
-        fichier_T3 = st.file_uploader(f"Importer le fichier T3 ({type_flux})", type=["xlsx"], key="T3")
-        fichier_T4 = st.file_uploader(f"Importer le fichier T4 ({type_flux})", type=["xlsx"], key="T4")
 
-        if fichier_T3 and fichier_T4 and type_flux == "ACP/ACH":
-            analyse_semestrielle(fichier_T3, fichier_T4)
+        fichier_T3 = st.file_uploader("Importer le fichier T3", type=["xlsx"], key="upload_T3_S2")
+        if fichier_T3:
+            st.session_state.fichier_T3 = fichier_T3
 
-        elif fichier_T3 and fichier_T4 and type_flux == "RTGS":
-            st.info("🔧 L’analyse RTGS sera bientôt disponible.")
+        fichier_T4 = st.file_uploader("Importer le fichier T4", type=["xlsx"], key="upload_T4_S2")
+        if fichier_T4:
+            st.session_state.fichier_T4 = fichier_T4
+
+        if st.session_state.fichier_T3 and st.session_state.fichier_T4:
+            analyse_semestrielle(st.session_state.fichier_T3, st.session_state.fichier_T4)
 
         st.stop()
 
 
 # ============================================================
-# 🔹 ANALYSE ANNUELLE (NE PAS MODIFIER)
+# 🔹 ANALYSE ANNUELLE
 # ============================================================
 elif menu_principal == "Analyse Annuelle":
 
@@ -195,7 +200,6 @@ elif menu_principal == "Analyse Annuelle":
 
     st.markdown("### 🆘 Aide")
 
-    # Bloc de téléchargement du modèle DSMP
     with st.expander("📥 Télécharger le modèle de fichier DSMP"):
         try:
             with open("modele_dsmp.xlsx", "rb") as f:
@@ -208,26 +212,21 @@ elif menu_principal == "Analyse Annuelle":
         except FileNotFoundError:
             st.error("❌ Le fichier 'modele_dsmp.xlsx' est introuvable.")
 
-    # Upload du fichier annuel
-    uploaded_file = st.file_uploader("Importer le fichier Excel DSMP (annuel)", type=["xlsx"], key="annuel")
+    uploaded_file = st.file_uploader("Importer le fichier annuel", type=["xlsx"], key="annuel")
 
     if not uploaded_file:
         st.info("Veuillez importer le fichier annuel pour afficher les analyses.")
         st.stop()
 
-
-# ============================================================
-# 🔹 ONGLET DES ANALYSES ANNUELLES
-# ============================================================
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "Évolution Globale ACP/ACH",
-    "Parts de Marché",
-    "Rejets",
-    "Matrice de positionnement",
-    "Analyse Global RTGS",
-    "Répartition par devise de règlement (RTGS)",
-    "Contribution SNP",
-])
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "Évolution Globale ACP/ACH",
+        "Parts de Marché",
+        "Rejets",
+        "Matrice de positionnement",
+        "Analyse Global RTGS",
+        "Répartition par devise de règlement (RTGS)",
+        "Contribution SNP",
+    ])
 
 
 
