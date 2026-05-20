@@ -7,12 +7,15 @@ from auth import check_auth
 from fonctions_utils import format_dataframe
 from analyse_trimestrielle import analyse_trimestrielle
 from analyse_semestrielle import analyse_semestrielle
+from modeles_trimestres import telecharger_modele_trimestre
+
 
 
 # ============================================================
 # 🔹 AUTHENTIFICATION
-# ============================================================
 # check_auth()
+# ============================================================
+
 
 
 # ============================================================
@@ -110,7 +113,7 @@ p, label, span {
 # ============================================================
 # 🔹 TITRE PRINCIPAL
 # ============================================================
-st.title("DSMP – Outil de Reporting des Systèmes de Paiement")
+st.title("DSMP – Outil de Reporting des flux des Systèmes de Paiement")
 st.write("""
 Analyse automatique des flux ACP/ACH, RTGS, Trimestriels, Semestriels et Annuels.
 """)
@@ -135,67 +138,69 @@ menu_principal = st.sidebar.radio(
 # ============================================================
 if menu_principal == "Analyse Trimestrielle":
 
-    st.markdown(
-        """
-        <h1 style='text-align: center; color: #00BFFF; margin-top:20px;'>
-            🧮 Analyse des flux trimestriels
-        </h1>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # ========================================================
-    # 🔹 CHOIX FLUX
-    # ========================================================
+    # Choix du type de flux
     type_flux = st.radio(
         "Choisir le type de flux à analyser",
         ["ACP/ACH", "RTGS"],
         horizontal=True
     )
 
-    # ========================================================
-    # 🔹 CHOIX TRIMESTRE
-    # ========================================================
+    # Choix du trimestre
     sous_menu = st.sidebar.radio(
         "Choisir le trimestre",
         ["T1", "T2", "T3", "T4"]
     )
 
-    st.header(f"📊 Analyse {sous_menu} {type_flux}")
+    # 🔥 TITRE DYNAMIQUE
+    st.markdown(
+        f"<h1 style='text-align:center;color:#00BFFF;margin-top:20px;'>"
+        f"🧮 Analyse du trimestre {sous_menu} — {type_flux}"
+        f"</h1>",
+        unsafe_allow_html=True
+    )
 
     # ========================================================
-    # 🔹 RTGS
+    # 🔹 AFFICHAGE DU MODELE SELON LE TYPE DE FLUX
+    # ========================================================
+    if type_flux == "ACP/ACH":
+        telecharger_modele_trimestre(sous_menu)
+    else:
+        st.info("📄 Le modèle RTGS n’est pas encore disponible.")
+
+    # ========================================================
+    # 🔹 RTGS non disponible
     # ========================================================
     if type_flux == "RTGS":
-
         st.info("🔧 L’analyse RTGS sera bientôt disponible.")
-
         st.stop()
 
     # ========================================================
-    # 🔹 ACP/ACH
+    # 🔹 UPLOAD ET ANALYSE
     # ========================================================
+    key_map = {
+        "T1": "fichier_T1_TRI",
+        "T2": "fichier_T2_TRI",
+        "T3": "fichier_T3_TRI",
+        "T4": "fichier_T4_TRI"
+    }
+
     fichier = st.file_uploader(
         f"Importer le fichier {sous_menu} ({type_flux})",
         type=["xlsx"],
-        key=f"trim_{sous_menu}_{type_flux}"
+        key=f"upload_TRI_{sous_menu}"
     )
 
-    if fichier is not None:
-        st.session_state.fichier_trimestriel = fichier
+    if fichier:
+        st.session_state[key_map[sous_menu]] = fichier
 
-    if st.session_state.fichier_trimestriel:
+    fichier_charge = st.session_state.get(key_map[sous_menu])
 
-        st.success(
-            f"✅ Fichier chargé : "
-            f"{st.session_state.fichier_trimestriel.name}"
-        )
-
-        analyse_trimestrielle(
-            st.session_state.fichier_trimestriel
-        )
+    if fichier_charge:
+        analyse_trimestrielle(fichier_charge, sous_menu)
 
     st.stop()
+
+
 
 # ============================================================
 # 🔹 ANALYSE SEMESTRIELLE
@@ -228,21 +233,21 @@ elif menu_principal == "Analyse Semestrielle":
         ["S1", "S2"]
     )
 
-    st.header(f"📊 Analyse {sous_menu} {type_flux}")
-
     # ========================================================
     # 🔹 RTGS
     # ========================================================
     if type_flux == "RTGS":
 
         st.info("🔧 L’analyse RTGS sera bientôt disponible.")
-
         st.stop()
 
     # ========================================================
     # 🔹 SEMESTRE 1
     # ========================================================
     if sous_menu == "S1":
+
+        st.subheader("📂 Importation des fichiers T1 et T2")
+        st.info("Utiliser les fichiers modèles des trimestres pour le semestre correspondant")
 
         fichier_T1 = st.file_uploader(
             f"Importer le fichier T1 ({type_flux})",
@@ -256,14 +261,12 @@ elif menu_principal == "Analyse Semestrielle":
             key="T2_S1"
         )
 
-        # Sauvegarde session
-        if fichier_T1 is not None:
+        if fichier_T1:
             st.session_state.fichier_T1 = fichier_T1
 
-        if fichier_T2 is not None:
+        if fichier_T2:
             st.session_state.fichier_T2 = fichier_T2
 
-        # Affichage fichiers chargés
         if st.session_state.fichier_T1:
             st.success(
                 f"✅ Fichier T1 chargé : "
@@ -276,7 +279,6 @@ elif menu_principal == "Analyse Semestrielle":
                 f"{st.session_state.fichier_T2.name}"
             )
 
-        # Analyse
         if (
             st.session_state.fichier_T1
             and st.session_state.fichier_T2
@@ -294,6 +296,8 @@ elif menu_principal == "Analyse Semestrielle":
     # ========================================================
     if sous_menu == "S2":
 
+        st.subheader("📂 Importation des fichiers T3 et T4")
+
         fichier_T3 = st.file_uploader(
             f"Importer le fichier T3 ({type_flux})",
             type=["xlsx"],
@@ -306,14 +310,12 @@ elif menu_principal == "Analyse Semestrielle":
             key="T4_S2"
         )
 
-        # Sauvegarde session
-        if fichier_T3 is not None:
+        if fichier_T3:
             st.session_state.fichier_T3 = fichier_T3
 
-        if fichier_T4 is not None:
+        if fichier_T4:
             st.session_state.fichier_T4 = fichier_T4
 
-        # Affichage fichiers chargés
         if st.session_state.fichier_T3:
             st.success(
                 f"✅ Fichier T3 chargé : "
@@ -326,7 +328,6 @@ elif menu_principal == "Analyse Semestrielle":
                 f"{st.session_state.fichier_T4.name}"
             )
 
-        # Analyse
         if (
             st.session_state.fichier_T3
             and st.session_state.fichier_T4
@@ -338,7 +339,6 @@ elif menu_principal == "Analyse Semestrielle":
             )
 
         st.stop()
-
 # ============================================================
 # 🔹 ANALYSE ANNUELLE
 # ============================================================
