@@ -42,7 +42,7 @@ def login():
     st.markdown('<div class="login-box">', unsafe_allow_html=True)
 
     # Titre de la page de connexion
-    st.markdown("<h3 style='text-align:center;'>Authentification DSMP</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align:center;'>Authentification</h3>", unsafe_allow_html=True)
 
     # Champs de saisie pour l'utilisateur et le mot de passe
     user = st.text_input("Utilisateur")
