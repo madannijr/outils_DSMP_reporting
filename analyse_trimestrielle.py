@@ -182,7 +182,7 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
     df_aff = pd.concat([df_aff, ligne_total], ignore_index=True)
 
     # Affichage tableau
-    st.subheader(f"📊 Analyse {trimestre_detecte} — {annee1} vs {annee2} — {instrument.capitalize()}")
+    st.subheader(f"📊 Analyse {trimestre_detecte} — {annee1} vs {annee2} — {instrument}")
     st.dataframe(format_dataframe(df_aff))
 
     # Graphique Nombre

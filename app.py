@@ -13,7 +13,7 @@ from modeles_trimestres import telecharger_modele_trimestre
 
 # ============================================================
 # 🔹 AUTHENTIFICATION
-# check_auth()
+check_auth()
 # ============================================================
 
 
