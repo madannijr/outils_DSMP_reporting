@@ -45,7 +45,7 @@ def login():
     st.markdown("<h3 style='text-align:center;'>Authentification</h3>", unsafe_allow_html=True)
 
     # Champs de saisie pour l'utilisateur et le mot de passe
-    user = st.text_input("Utilisateur")
+    user = st.text_input("Identifiant ")
     pwd = st.text_input("Mot de passe", type="password")  # Mot de passe masqué
 
     # Bouton de connexion
