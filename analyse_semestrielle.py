@@ -1,38 +1,42 @@
-import pandas as pd
-import streamlit as st
-import numpy as np
-import matplotlib.pyplot as plt
-import re
-from fonctions_utils import format_dataframe
+# ============================================================
+# 🔹 Importation des librairies nécessaires
+# ============================================================
+import pandas as pd                  # Manipulation des données tabulaires
+import streamlit as st               # Interface utilisateur Streamlit
+import numpy as np                   # Calculs numériques
+import matplotlib.pyplot as plt      # Graphiques
+import re                            # Expressions régulières (extraction d'année)
+from fonctions_utils import format_dataframe  # Formatage esthétique des tableaux
 
 # ============================================================
-# 🔹 Conversion propre des montants
+# 🔹 Fonction : Conversion propre des montants
 # ============================================================
 def convertir(df, col):
     return (
         df[col]
-        .astype(str)
-        .str.replace(" ", "", regex=False)
-        .str.replace(",", ".", regex=False)
-        .str.replace("\xa0", "", regex=False)
-        .str.replace("\u202f", "", regex=False)
-        .apply(lambda x: pd.to_numeric(x, errors="coerce"))
-        .fillna(0)
+        .astype(str)                         # Convertit en texte pour nettoyage
+        .str.replace(" ", "", regex=False)   # Supprime les espaces
+        .str.replace(",", ".", regex=False)  # Remplace virgule par point
+        .str.replace("\xa0", "", regex=False)  # Supprime espace insécable
+        .str.replace("\u202f", "", regex=False) # Supprime espace fine
+        .apply(lambda x: pd.to_numeric(x, errors="coerce"))  # Convertit en numérique
+        .fillna(0)                           # Remplace NaN par 0
     )
 
 # ============================================================
-# 🔹 Extraction automatique des années
+# 🔹 Fonction : Extraction automatique des années
 # ============================================================
 def extraire_annee(col):
-    match = re.search(r"(20\d{2})", str(col))
+    match = re.search(r"(20\d{2})", str(col))  # Cherche une année dans le texte
     return int(match.group(1)) if match else None
 
 # ============================================================
-# 🔹 Détection automatique du trimestre (T1, T2, T3, T4)
+# 🔹 Fonction : Détection automatique du trimestre (T1, T2, T3, T4)
 # ============================================================
 def detecter_trimestre(df):
-    colonnes = " ".join([str(c).upper() for c in df.columns])
+    colonnes = " ".join([str(c).upper() for c in df.columns])  # Regroupe toutes les colonnes
 
+    # Recherche des mentions T1, T2, T3, T4 dans les noms de colonnes
     if "_T1_" in colonnes or "T1_" in colonnes or "_T1" in colonnes:
         return "T1"
     if "_T2_" in colonnes or "T2_" in colonnes or "_T2" in colonnes:
@@ -42,31 +46,27 @@ def detecter_trimestre(df):
     if "_T4_" in colonnes or "T4_" in colonnes or "_T4" in colonnes:
         return "T4"
 
-    return None
+    return None  # Aucun trimestre trouvé
 
 # ============================================================
-# 🔹 Nettoyage DataFrame
+# 🔹 Fonction : Nettoyage général du DataFrame
 # ============================================================
 def nettoyer(df):
-    df = df.loc[:, ~df.columns.str.contains("Unnamed", case=False)]
+    df = df.loc[:, ~df.columns.str.contains("Unnamed", case=False)]  # Supprime colonnes inutiles
     if "Banque" not in df.columns:
-        return pd.DataFrame()  # signaler plus haut
-    df = df[df["Banque"].notna()]
-    df["Banque"] = df["Banque"].astype(str).str.strip()
-    df = df[df["Banque"] != ""]
-    df = df[~df["Banque"].str.contains("TOTAL|TOTAUX", case=False, na=False)]
+        return pd.DataFrame()  # Retourne vide si colonne Banque absente
+    df = df[df["Banque"].notna()]                                    # Supprime lignes vides
+    df["Banque"] = df["Banque"].astype(str).str.strip()              # Nettoie les noms
+    df = df[df["Banque"] != ""]                                      # Supprime lignes vides
+    df = df[~df["Banque"].str.contains("TOTAL|TOTAUX", case=False)]  # Supprime totaux
     return df
 
 # ============================================================
-# 🔹 Analyse Semestrielle : S1 = T1 + T2 ou S2 = T3 + T4
+# 🔹 Fonction principale : Analyse Semestrielle
 # ============================================================
 def analyse_semestrielle(fichier_A, fichier_B):
-    """
-    Cette fonction accepte deux fichiers Excel et vérifie automatiquement
-    s'il s'agit d'un couple (T1,T2) ou (T3,T4). Elle refuse les paires invalides.
-    """
 
-    st.header("Analyse Semestrielle ACP/ACH")
+    st.header("Analyse Semestrielle ACP/ACH")  # Titre principal
 
     # Choix de l’instrument
     instrument = st.selectbox(
@@ -74,7 +74,7 @@ def analyse_semestrielle(fichier_A, fichier_B):
         ["virements", "chèques", "chèques représenté", "lettre de change"]
     )
 
-    # Vérifier que les feuilles existent dans les deux fichiers
+    # Vérification des feuilles disponibles dans les deux fichiers
     try:
         feuilles_A = pd.ExcelFile(fichier_A).sheet_names
         feuilles_B = pd.ExcelFile(fichier_B).sheet_names
@@ -82,13 +82,14 @@ def analyse_semestrielle(fichier_A, fichier_B):
         st.error(f"Erreur lors de la lecture des fichiers : {e}")
         return
 
+    # Vérifie que l’instrument existe dans les deux fichiers
     if instrument not in feuilles_A or instrument not in feuilles_B:
         st.error(f"❌ Les fichiers fournis ne contiennent pas la feuille '{instrument}'.")
         st.write("Feuilles disponibles dans fichier A :", feuilles_A)
         st.write("Feuilles disponibles dans fichier B :", feuilles_B)
         return
 
-    # Lecture des feuilles choisies
+    # Lecture des deux feuilles
     try:
         df_A = pd.read_excel(fichier_A, sheet_name=instrument)
         df_B = pd.read_excel(fichier_B, sheet_name=instrument)
@@ -96,7 +97,7 @@ def analyse_semestrielle(fichier_A, fichier_B):
         st.error(f"Erreur lors de la lecture des feuilles '{instrument}' : {e}")
         return
 
-    # Nettoyage des noms de colonnes (avant détection pour être sûr)
+    # Nettoyage des noms de colonnes
     for df in [df_A, df_B]:
         df.columns = (
             df.columns.astype(str)
@@ -111,7 +112,7 @@ def analyse_semestrielle(fichier_A, fichier_B):
     tri_A = detecter_trimestre(df_A)
     tri_B = detecter_trimestre(df_B)
 
-    # Vérifier que la paire est valide : soit {T1,T2} soit {T3,T4}
+    # Vérification que la paire est valide : (T1,T2) ou (T3,T4)
     paire = {tri_A, tri_B}
     if paire == {"T1", "T2"}:
         semestre_label = "S1"
@@ -136,7 +137,7 @@ def analyse_semestrielle(fichier_A, fichier_B):
         st.error("❌ Les fichiers doivent contenir la colonne 'Banque' et des lignes valides.")
         return
 
-    # Fusion sur la colonne Banque
+    # Fusion des deux trimestres sur la colonne Banque
     df = df_A.merge(df_B, on="Banque", how="outer", suffixes=(f"_{tA}", f"_{tB}"))
 
     # Détection automatique des colonnes Nombre/Montant
@@ -148,7 +149,7 @@ def analyse_semestrielle(fichier_A, fichier_B):
         st.write("Colonnes disponibles :", df.columns.tolist())
         return
 
-    # Détection des années présentes dans les colonnes
+    # Détection des années présentes
     annees = sorted({
         extraire_annee(c)
         for c in colonnes_nombre + colonnes_montant
@@ -162,7 +163,7 @@ def analyse_semestrielle(fichier_A, fichier_B):
 
     annee1, annee2 = annees[-2], annees[-1]
 
-    # Construire les noms de colonnes attendus dynamiquement selon tA/tB
+    # Construction dynamique des noms de colonnes attendus
     try:
         col_A_nb_annee1 = [c for c in colonnes_nombre if f"{tA}_{annee1}" in c][0]
         col_B_nb_annee1 = [c for c in colonnes_nombre if f"{tB}_{annee1}" in c][0]
@@ -183,7 +184,7 @@ def analyse_semestrielle(fichier_A, fichier_B):
         st.write("Colonnes détectées :", df.columns.tolist())
         return
 
-    # Conversion numérique
+    # Conversion numérique des colonnes
     A_nb_annee1 = convertir(df, col_A_nb_annee1)
     B_nb_annee1 = convertir(df, col_B_nb_annee1)
     A_nb_annee2 = convertir(df, col_A_nb_annee2)
@@ -228,6 +229,7 @@ def analyse_semestrielle(fichier_A, fichier_B):
     total_var_nb = ((total_nb2 - total_nb1) / total_nb1 * 100) if total_nb1 != 0 else 0
     total_var_mt = ((total_mt2 - total_mt1) / total_mt1 * 100) if total_mt1 != 0 else 0
 
+    # Ligne des totaux
     ligne_total = pd.DataFrame([{
         "Banque": "TOTAUX",
         f"Nombre_{semestre_label}_{annee1}": total_nb1,

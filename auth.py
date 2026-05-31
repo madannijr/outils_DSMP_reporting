@@ -35,7 +35,7 @@ def login():
     # Conteneur centré pour tout le contenu
     st.markdown('<div class="centered">', unsafe_allow_html=True)
 
-    # Affichage du logo BCRG (doit être dans le même dossier que ton app)
+    # Affichage du logo BCRG
     st.image("BCRG_LOGO.png", width=120)
 
     # Boîte contenant le formulaire de connexion

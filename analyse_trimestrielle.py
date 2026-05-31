@@ -1,81 +1,76 @@
-import pandas as pd
-import streamlit as st
-import numpy as np
-import matplotlib.pyplot as plt
-import re
-from fonctions_utils import format_dataframe
-
+# ============================================================
+# 🔹 Importation des librairies nécessaires
+# ============================================================
+import pandas as pd          # Manipulation des données
+import streamlit as st       # Interface Streamlit
+import numpy as np           # Calculs numériques
+import matplotlib.pyplot as plt  # Graphiques
+import re                    # Expressions régulières (extraction d'année)
+from fonctions_utils import format_dataframe  # Formatage tableau
 
 # ============================================================
-# 🔹 Conversion propre des montants
+# 🔹 Fonction : Conversion propre des montants
 # ============================================================
 def convertir(df, col):
     return (
         df[col]
-        .astype(str)
-        .str.replace(" ", "", regex=False)
-        .str.replace(",", ".", regex=False)
-        .str.replace("\xa0", "", regex=False)
-        .str.replace("\u202f", "", regex=False)
-        .apply(lambda x: pd.to_numeric(x, errors="coerce"))
-        .fillna(0)
+        .astype(str)                         # Convertit en texte pour nettoyage
+        .str.replace(" ", "", regex=False)   # Supprime les espaces
+        .str.replace(",", ".", regex=False)  # Remplace virgule par point
+        .str.replace("\xa0", "", regex=False)  # Supprime espace insécable
+        .str.replace("\u202f", "", regex=False) # Supprime espace fine
+        .apply(lambda x: pd.to_numeric(x, errors="coerce"))  # Convertit en numérique
+        .fillna(0)                           # Remplace NaN par 0
     )
 
-
 # ============================================================
-# 🔹 Extraction automatique des années
+# 🔹 Fonction : Extraction automatique des années
 # ============================================================
 def extraire_annee(col):
-    match = re.search(r"(20\d{2})", str(col))
+    match = re.search(r"(20\d{2})", str(col))  # Cherche une année dans le texte
     return int(match.group(1)) if match else None
 
-
 # ============================================================
-# 🔹 Détection automatique du trimestre (T1, T2, T3, T4)
+# 🔹 Fonction : Détection automatique du trimestre (T1, T2, T3, T4)
 # ============================================================
 def detecter_trimestre(df):
-    colonnes = " ".join(df.columns).upper()
+    colonnes = " ".join(df.columns).upper()  # Regroupe toutes les colonnes en majuscules
 
-    if "T1" in colonnes:
-        return "T1"
-    if "T2" in colonnes:
-        return "T2"
-    if "T3" in colonnes:
-        return "T3"
-    if "T4" in colonnes:
-        return "T4"
+    if "T1" in colonnes: return "T1"
+    if "T2" in colonnes: return "T2"
+    if "T3" in colonnes: return "T3"
+    if "T4" in colonnes: return "T4"
 
-    return None
-
+    return None  # Aucun trimestre trouvé
 
 # ============================================================
-# 🔹 Nettoyage DataFrame
+# 🔹 Fonction : Nettoyage général du DataFrame
 # ============================================================
 def nettoyer(df):
-    df = df.loc[:, ~df.columns.str.contains("Unnamed", case=False)]
-    df = df[df["Banque"].notna()]
-    df["Banque"] = df["Banque"].astype(str).str.strip()
-    df = df[df["Banque"] != ""]
-    df = df[~df["Banque"].str.contains("TOTAL|TOTAUX", case=False, na=False)]
+    df = df.loc[:, ~df.columns.str.contains("Unnamed", case=False)]  # Supprime colonnes inutiles
+    df = df[df["Banque"].notna()]                                    # Supprime lignes vides
+    df["Banque"] = df["Banque"].astype(str).str.strip()              # Nettoie les noms
+    df = df[df["Banque"] != ""]                                      # Supprime lignes vides
+    df = df[~df["Banque"].str.contains("TOTAL|TOTAUX", case=False)]  # Supprime totaux
     return df
 
-
 # ============================================================
-# 🔹 Analyse Trimestrielle Dynamique
+# 🔹 Fonction principale : Analyse Trimestrielle Dynamique
 # ============================================================
 def analyse_trimestrielle(uploaded_file, trimestre_attendu):
 
-    st.header(f"Analyse Trimestrielle ACP/ACH — {trimestre_attendu}")
+    st.header(f"Analyse Trimestrielle ACP/ACH — {trimestre_attendu}")  # Titre
 
+    # Sélection de l’instrument
     instrument = st.selectbox(
         "Choisir un instrument :",
         ["virements", "chèques", "chèques représenté", "lettre de change"]
     )
 
-    # Lecture fichier
+    # Lecture du fichier Excel selon l’instrument
     df = pd.read_excel(uploaded_file, sheet_name=instrument)
 
-    # Nettoyage noms colonnes
+    # Nettoyage des noms de colonnes
     df.columns = (
         df.columns.astype(str)
         .str.replace("\n", "")
@@ -85,7 +80,7 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
         .str.strip()
     )
 
-    # 🔥 Détection automatique du trimestre réel dans le fichier
+    # Détection automatique du trimestre réel
     trimestre_detecte = detecter_trimestre(df)
 
     if trimestre_detecte is None:
@@ -93,7 +88,7 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
         st.write(df.columns.tolist())
         return
 
-    # 🔥 Vérification stricte
+    # Vérification stricte : correspondance entre menu et fichier
     if trimestre_detecte != trimestre_attendu:
         st.error(
             f"❌ Le fichier chargé appartient à **{trimestre_detecte}**, "
@@ -104,11 +99,11 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
     # Nettoyage général
     df = nettoyer(df)
 
-    # Colonnes détectées
+    # Détection des colonnes Nombre et Montant du trimestre
     colonnes_nombre = [c for c in df.columns if "Nombre" in c and trimestre_detecte in c]
     colonnes_montant = [c for c in df.columns if "Montant" in c and trimestre_detecte in c]
 
-    # 🔥 Détection automatique des années
+    # Extraction automatique des années
     annees = sorted({
         extraire_annee(c)
         for c in colonnes_nombre + colonnes_montant
@@ -120,7 +115,7 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
         st.write(df.columns.tolist())
         return
 
-    # Les deux dernières années trouvées
+    # Sélection des deux dernières années
     annee1, annee2 = annees[-2], annees[-1]
 
     # Colonnes correspondantes
@@ -137,13 +132,14 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
     mt1 = convertir(df, col_mt_annee1)
     mt2 = convertir(df, col_mt_annee2)
 
-    # Variations %
+    # Calcul des variations %
     variation_nombre = ((nb2 - nb1) / nb1.replace(0, np.nan)) * 100
     variation_montant = ((mt2 - mt1) / mt1.replace(0, np.nan)) * 100
+
     variation_nombre = variation_nombre.fillna(0).round(2)
     variation_montant = variation_montant.fillna(0).round(2)
 
-    # Tableau final
+    # Construction du tableau final
     df_aff = pd.DataFrame({
         "Banque": df["Banque"],
 
@@ -157,7 +153,7 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
         "Variation Montant (%)": variation_montant.map(lambda x: f"{x:.2f}%".replace(".", ","))
     })
 
-    # Totaux
+    # Calcul des totaux
     total_nb1 = nb1.sum()
     total_nb2 = nb2.sum()
     total_mt1 = mt1.sum()
@@ -166,6 +162,7 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
     total_var_nb = ((total_nb2 - total_nb1) / total_nb1 * 100) if total_nb1 != 0 else 0
     total_var_mt = ((total_mt2 - total_mt1) / total_mt1 * 100) if total_mt1 != 0 else 0
 
+    # Ligne des totaux
     ligne_total = pd.DataFrame([{
         "Banque": "TOTAUX",
 
@@ -181,11 +178,13 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
 
     df_aff = pd.concat([df_aff, ligne_total], ignore_index=True)
 
-    # Affichage tableau
+    # Affichage du tableau final
     st.subheader(f"📊 Analyse {trimestre_detecte} — {annee1} vs {annee2} — {instrument}")
     st.dataframe(format_dataframe(df_aff))
 
-    # Graphique Nombre
+    # -----------------------------------------------------
+    # 🔹 Graphique des volumes
+    # -----------------------------------------------------
     df_graph = df_aff[df_aff["Banque"] != "TOTAUX"]
 
     fig1, ax1 = plt.subplots(figsize=(14, 5))
@@ -202,7 +201,9 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
     ax1.grid(axis="y", linestyle="--", alpha=0.7)
     st.pyplot(fig1)
 
-    # Graphique Montant
+    # -----------------------------------------------------
+    # 🔹 Graphique des montants
+    # -----------------------------------------------------
     fig2, ax2 = plt.subplots(figsize=(14, 5))
 
     ax2.bar([i - width/2 for i in x], df_graph[f"Montant_{trimestre_detecte}_{annee1}"], width, label=str(annee1))

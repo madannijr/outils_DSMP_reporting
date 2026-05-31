@@ -16,8 +16,6 @@ from modeles_trimestres import telecharger_modele_trimestre
 check_auth()
 # ============================================================
 
-
-
 # ============================================================
 # 🔹 SESSION STATE POUR GARDER LES FICHIERS
 # ============================================================
@@ -151,7 +149,7 @@ if menu_principal == "Analyse Trimestrielle":
         ["T1", "T2", "T3", "T4"]
     )
 
-    # 🔥 TITRE DYNAMIQUE
+    # TITRE DYNAMIQUE
     st.markdown(
         f"<h1 style='text-align:center;color:#00BFFF;margin-top:20px;'>"
         f"🧮 Analyse du trimestre {sous_menu} — {type_flux}"
@@ -171,12 +169,13 @@ if menu_principal == "Analyse Trimestrielle":
     # 🔹 RTGS non disponible
     # ========================================================
     if type_flux == "RTGS":
-        st.info("🔧 L’analyse RTGS sera bientôt disponible.")
+        st.info("🔧 L’analyse RTGS n'est pas encore disponible.")
         st.stop()
 
     # ========================================================
     # 🔹 UPLOAD ET ANALYSE
     # ========================================================
+    # Mapping des clés pour stocker les fichiers
     key_map = {
         "T1": "fichier_T1_TRI",
         "T2": "fichier_T2_TRI",
@@ -189,16 +188,16 @@ if menu_principal == "Analyse Trimestrielle":
         type=["xlsx"],
         key=f"upload_TRI_{sous_menu}"
     )
-
+    # Stockage dans la session
     if fichier:
         st.session_state[key_map[sous_menu]] = fichier
-
+    # Récupération du fichier stocké
     fichier_charge = st.session_state.get(key_map[sous_menu])
-
+     # Lancement de l’analyse si un fichier est chargé
     if fichier_charge:
         analyse_trimestrielle(fichier_charge, sous_menu)
 
-    st.stop()
+    st.stop()   # Empêche Streamlit d’exécuter la suite du script
 
 
 
@@ -541,7 +540,6 @@ with tab1:
     # Affichage du graphique final
     st.pyplot(fig)
 
-
 # =========================================================
 # 2) ONGLET : PARTS DE MARCHÉ
 # =========================================================
@@ -550,25 +548,32 @@ with tab2:
     # -----------------------------------------------------
     # TITRE PRINCIPAL DE L’ONGLET
     # -----------------------------------------------------
-    st.header("Parts de Marché par Instrument")
+    st.header("Parts de Marché par Instrument")  
+    # Affiche le titre de la section
 
     # -----------------------------------------------------
-    # CHOIX DE L’INSTRUMENT (Chèques ou Virements)
+    # CHOIX DE L’INSTRUMENT (Chèques, Virements, Lettre de change)
     # -----------------------------------------------------
-    # Permet à l’utilisateur de sélectionner l’instrument à analyser
-    choix = st.selectbox("Choisir l’instrument :", ["Chèques", "Virements"])
+    choix = st.selectbox(
+        "Choisir l’instrument :",
+        ["Chèques", "Virements", "Lettre de change"]  
+        # Ajout de "Lettre de change" sans modifier le reste du code
+    )
 
     # -----------------------------------------------------
     # CHOIX DU TYPE DE VISUEL (Barres ou Pareto)
     # -----------------------------------------------------
-    # Deux types de graphiques disponibles pour visualiser les parts
-    type_graph = st.selectbox("Type de visuel :", ["Barres horizontales", "Pareto"])
+    type_graph = st.selectbox(
+        "Type de visuel :",
+        ["Barres horizontales", "Pareto"]
+    )
+    # L’utilisateur choisit le type de graphique
 
     # -----------------------------------------------------
     # LECTURE DU FICHIER EXCEL (feuille ACP/ACH)
     # -----------------------------------------------------
-    # On charge la feuille contenant les données par banque
     df_banque = pd.read_excel(uploaded_file, sheet_name="Evolution par Banque ACPACH")
+    # Charge la feuille contenant les données par banque
 
     # -----------------------------------------------------
     # RENOMMAGE DES COLONNES POUR SIMPLIFIER LES TRAITEMENTS
@@ -580,68 +585,84 @@ with tab2:
         "LC_Nombre", "LC_Montant",
         "Total_Nombre", "Total_Montant"
     ]
-    
+    # On renomme les colonnes pour avoir des noms cohérents
+
     # -----------------------------------------------------
     # SÉLECTION DES COLONNES SELON L’INSTRUMENT CHOISI
     # -----------------------------------------------------
-    # Si l’utilisateur choisit "Chèques", on prend les colonnes correspondantes
     if choix == "Chèques":
+        # Si l’utilisateur choisit Chèques → on prend les colonnes Chq
         df = df_banque[["Banque", "Chq_Nombre", "Chq_Montant"]].copy()
         df.columns = ["Banque", "Volume", "Valeur"]
-    # Sinon, on prend les colonnes des virements
-    else:
+
+    elif choix == "Virements":
+        # Si l’utilisateur choisit Virements → on prend les colonnes Vir
         df = df_banque[["Banque", "Vir_Nombre", "Vir_Montant"]].copy()
         df.columns = ["Banque", "Volume", "Valeur"]
 
-    # -----------------------------------------------------
-    # SUPPRESSION DE LA LIGNE "TOTAL" DU FICHIER EXCEL
-    # -----------------------------------------------------
-    # Cette ligne fausse les calculs de parts de marché
-    df = df[df["Banque"] != "Total"]
+    else:
+        # Si l’utilisateur choisit Lettre de change → on prend les colonnes LC
+        df = df_banque[["Banque", "LC_Nombre", "LC_Montant"]].copy()
+        df.columns = ["Banque", "Volume", "Valeur"]
 
     # -----------------------------------------------------
-    # NETTOYAGE DES DONNÉES (espaces, tirets, valeurs manquantes)
+    # SUPPRESSION DE LA LIGNE "TOTAL"
+    # -----------------------------------------------------
+    df = df[df["Banque"] != "Total"]
+    # On retire la ligne TOTAL qui fausse les parts de marché
+
+    # -----------------------------------------------------
+    # NETTOYAGE DES DONNÉES
     # -----------------------------------------------------
     for col in ["Volume", "Valeur"]:
         df[col] = (
             df[col].astype(str)
             .str.replace(" ", "", regex=False)   # Supprime les espaces
-            .str.replace("—", "0", regex=False)  # Remplace les tirets longs par 0
-            .str.replace("-", "0", regex=False)  # Remplace les tirets courts par 0
+            .str.replace("—", "0", regex=False)  # Tiret long → 0
+            .str.replace("-", "0", regex=False)  # Tiret court → 0
         )
-        # Conversion en numérique et remplacement des NaN par 0
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+        # Convertit en numérique et remplace les erreurs par 0
 
     # -----------------------------------------------------
     # SUPPRESSION DES LIGNES VIDES OU INVALIDES
     # -----------------------------------------------------
-    df = df[df["Banque"].notna()]      # Supprime les lignes sans nom de banque
+    df = df[df["Banque"].notna()]      # Supprime les lignes sans nom
     df = df[df["Banque"] != ""]        # Supprime les lignes vides
-    df = df[df["Valeur"] > 0]          # Supprime les lignes avec valeur nulle
+    df = df[df["Valeur"] > 0]          # Supprime les banques sans valeur
 
     # -----------------------------------------------------
-    # CALCUL DES PARTS DE MARCHÉ (EN %)
+    # CALCUL DES PARTS DE MARCHÉ
     # -----------------------------------------------------
-    total_valeur = df["Valeur"].sum()  # Somme totale des montants
-    # Calcul correct : proportion (0.1937 pour 19.37%)
-    df["Part_Valeur"] = df["Valeur"] / total_valeur
+    total_valeur = df["Valeur"].sum()  
+    # Somme totale des montants pour calculer les parts
+
+    df["Part_Valeur"] = df["Valeur"] / total_valeur  
+    # Part de marché = valeur banque / valeur totale
 
     # -----------------------------------------------------
-    # TRI DÉCROISSANT DES BANQUES PAR PART DE MARCHÉ
+    # TRI DÉCROISSANT DES BANQUES
     # -----------------------------------------------------
-    df_sorted = df.sort_values("Part_Valeur", ascending=False)
+    df_sorted = df.sort_values("Part_Valeur", ascending=False).reset_index(drop=True)
+    df_sorted.index = df_sorted.index + 1  # commence à 1
+    df_sorted["Rang"] = df_sorted.index
+
 
     # -----------------------------------------------------
-    # FORMATAGE POUR L’AFFICHAGE (conversion en %)
+    # FORMATAGE POUR L’AFFICHAGE
     # -----------------------------------------------------
-    df_sorted["Part_Valeur"] = df_sorted["Part_Valeur"].apply(lambda x: f"{x*100:.2f}%")
+    df_sorted["Part_Valeur"] = df_sorted["Part_Valeur"].apply(
+        lambda x: f"{x*100:.2f}%"
+    )
+    # Conversion en pourcentage lisible
 
     # -----------------------------------------------------
-    # AFFICHAGE DU TABLEAU DANS STREAMLIT
+    # AFFICHAGE DU TABLEAU
     # -----------------------------------------------------
     st.subheader("Tableau des parts de marché")
     df_affichage = format_dataframe(df_sorted)
     st.dataframe(df_affichage)
+    # Affiche le tableau formaté
 
     # =====================================================
     # 🔹 VISUEL 1 : BARRES HORIZONTALES
@@ -650,14 +671,16 @@ with tab2:
 
         fig, ax = plt.subplots(figsize=(7, 4))
 
+        ax.barh(
+            df_sorted["Banque"],
+            df_sorted["Part_Valeur"].str.replace("%", "").astype(float),
+            color="#1F77B4"
+        )
         # Barres horizontales représentant la part de marché
-        ax.barh(df_sorted["Banque"], df_sorted["Part_Valeur"].str.replace("%", "").astype(float), color="#1F77B4")
 
-        # Titre et étiquettes
         ax.set_xlabel("Part de marché (%)")
         ax.set_title(f"Parts de Marché {choix} (en Valeur)", fontweight="bold")
 
-        # Style visuel épuré
         ax.set_facecolor("#F8F9F9")
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
@@ -676,25 +699,28 @@ with tab2:
 
         fig, ax1 = plt.subplots(figsize=(7, 4))
 
-        # Barres individuelles (part de chaque banque)
-        ax1.bar(df_sorted["Banque"], df_sorted["Part_Valeur"].str.replace("%", "").astype(float), color="#1F77B4", label="Part individuelle")
+        ax1.bar(
+            df_sorted["Banque"],
+            df_sorted["Part_Valeur"].str.replace("%", "").astype(float),
+            color="#1F77B4",
+            label="Part individuelle"
+        )
         ax1.set_ylabel("Part de marché (%)")
         ax1.set_xticklabels(df_sorted["Banque"], rotation=45, ha="right")
 
-        # Ligne cumulative (somme progressive des parts)
+        # Ligne cumulative
         ax2 = ax1.twinx()
         cumul = df_sorted["Part_Valeur"].str.replace("%", "").astype(float).cumsum()
         ax2.plot(df_sorted["Banque"], cumul, color="green", marker="o", label="Cumul (%)")
         ax2.set_ylabel("Cumul des parts (%)")
 
-        # Légendes encadrées pour plus de lisibilité
         ax1.legend(loc="upper left", frameon=True, edgecolor="black", facecolor="white")
         ax2.legend(loc="upper right", frameon=True, edgecolor="black", facecolor="white")
 
-        # Titre du graphique
         plt.title(f"Concentration des parts de marché ({choix} en valeur)", fontweight="bold")
         plt.tight_layout()
         st.pyplot(fig)
+
 
 
 
@@ -752,68 +778,118 @@ with tab3:
     x = np.arange(len(instruments))  # Positions X (0, 1)
     largeur = 0.35                   # Largeur des barres
 
-    # =====================================================
+        # =====================================================
     # 🔹 VISUEL 1 : BARRES GROUPÉES AVEC ANNOTATIONS
     # =====================================================
     if type_graph == "Barres groupées":
+        # Si l’utilisateur choisit l’option "Barres groupées", on affiche ce graphique
 
         fig, ax = plt.subplots(figsize=(6, 3.5))
+        # Création de la figure et de l’axe pour le graphique (taille 6x3.5)
 
         # Barres pour les taux en volume (bleu)
-        ax.bar(x - largeur/2, df_comparaison["Volume_Taux"], largeur, label="Taux de Rejets en Volume", color="#1F77B4")
+        ax.bar(
+            x - largeur/2,                         # Position des barres légèrement à gauche
+            df_comparaison["Volume_Taux"],         # Valeurs des taux en volume
+            largeur,                                # Largeur des barres
+            label="Taux de Rejets en Volume",       # Légende
+            color="#1F77B4"                         # Couleur bleue
+        )
 
         # Barres pour les taux en valeur (orange)
-        ax.bar(x + largeur/2, df_comparaison["Valeur_Taux"], largeur, label="Taux de Rejets en Valeur", color="#F39C12")
+        ax.bar(
+            x + largeur/2,                         # Position des barres légèrement à droite
+            df_comparaison["Valeur_Taux"],         # Valeurs des taux en valeur
+            largeur,                                # Largeur des barres
+            label="Taux de Rejets en Valeur",       # Légende
+            color="#F39C12"                         # Couleur orange
+        )
 
         # 🔹 Ajout des annotations au-dessus des barres
         for i in range(len(instruments)):
-            ax.text(x[i] - largeur/2, df_comparaison["Volume_Taux"].iloc[i] + 0.001,
-                    f"{df_comparaison['Volume_Taux'].iloc[i]*100:.2f}%", ha="center", fontsize=8)
-            ax.text(x[i] + largeur/2, df_comparaison["Valeur_Taux"].iloc[i] + 0.001,
-                    f"{df_comparaison['Valeur_Taux'].iloc[i]*100:.2f}%", ha="center", fontsize=8)
+            # Annotation pour le taux en volume
+            ax.text(
+                x[i] - largeur/2,                                   # Position horizontale
+                df_comparaison["Volume_Taux"].iloc[i] + 0.001,      # Position verticale légèrement au-dessus de la barre
+                f"{df_comparaison['Volume_Taux'].iloc[i]*100:.2f}%",# Texte affiché (en %)
+                ha="center", fontsize=8
+            )
+
+            # Annotation pour le taux en valeur
+            ax.text(
+                x[i] + largeur/2,
+                df_comparaison["Valeur_Taux"].iloc[i] + 0.001,
+                f"{df_comparaison['Valeur_Taux'].iloc[i]*100:.2f}%",
+                ha="center", fontsize=8
+            )
 
         # Configuration des axes
-        ax.set_xticks(x)
-        ax.set_xticklabels(instruments)
-        ax.set_ylabel("Taux (%)")
-        ax.set_title("Comparaison des taux de rejets : Chèques vs Virements", fontweight="bold")
+        ax.set_xticks(x)                     # Position des étiquettes sur l’axe X
+        ax.set_xticklabels(instruments)      # Noms des instruments (Chèques, Virements)
+        ax.set_ylabel("Taux (%)")            # Label de l’axe Y
+        ax.set_title(
+            "Comparaison des taux de rejets : Chèques vs Virements",
+            fontweight="bold"
+        )                                     # Titre du graphique
 
         # Légende encadrée
-        ax.legend(frameon=True, edgecolor="black", facecolor="white")
+        ax.legend(
+            frameon=True, edgecolor="black", facecolor="white"
+        )                                     # Légende avec cadre visible
 
         # Nettoyage visuel
-        ax.set_facecolor("#F8F9F9")
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
+        ax.set_facecolor("#F8F9F9")           # Fond clair
+        ax.spines["top"].set_visible(False)   # Suppression de la bordure supérieure
+        ax.spines["right"].set_visible(False) # Suppression de la bordure droite
 
-        plt.tight_layout()
-        st.pyplot(fig)
+        plt.tight_layout()                    # Ajustement automatique des marges
+        st.pyplot(fig)                        # Affichage du graphique dans Streamlit
 
     # =====================================================
     # 🔹 VISUEL 2 : LIGNES COMPARATIVES (ÉVOLUTION VISUELLE)
     # =====================================================
     else:
+        # Si l’utilisateur choisit un autre type de graphique, on affiche les lignes comparatives
 
         fig, ax = plt.subplots(figsize=(6, 3.5))
+        # Création de la figure et de l’axe
 
         # Ligne bleue pour les taux en volume
-        ax.plot(instruments, df_comparaison["Volume_Taux"] * 100, marker="o", color="#1F77B4", label="Taux de Rejets en Volume")
+        ax.plot(
+            instruments,                           # Axe X : instruments
+            df_comparaison["Volume_Taux"] * 100,   # Axe Y : taux en %
+            marker="o",                             # Marqueurs ronds
+            color="#1F77B4",                        # Couleur bleue
+            label="Taux de Rejets en Volume"        # Légende
+        )
 
         # Ligne orange pour les taux en valeur
-        ax.plot(instruments, df_comparaison["Valeur_Taux"] * 100, marker="o", color="#F39C12", label="Taux de Rejets en Valeur")
+        ax.plot(
+            instruments,
+            df_comparaison["Valeur_Taux"] * 100,
+            marker="o",
+            color="#F39C12",
+            label="Taux de Rejets en Valeur"
+        )
 
         # Configuration des axes
-        ax.set_ylabel("Taux (%)")
-        ax.set_title("Évolution comparative des taux de rejets", fontweight="bold")
+        ax.set_ylabel("Taux (%)")                  # Label axe Y
+        ax.set_title(
+            "Évolution comparative des taux de rejets",
+            fontweight="bold"
+        )                                          # Titre du graphique
 
         # Légende encadrée
-        ax.legend(frameon=True, edgecolor="black", facecolor="white")
+        ax.legend(
+            frameon=True, edgecolor="black", facecolor="white"
+        )                                          # Légende avec cadre
 
         # Grille légère pour lisibilité
-        ax.grid(alpha=0.3)
+        ax.grid(alpha=0.3)                         # Grille discrète (alpha = transparence)
 
-        plt.tight_layout()
-        st.pyplot(fig)
+        plt.tight_layout()                         # Ajustement des marges
+        st.pyplot(fig)                             # Affichage du graphique
+
 
 # =========================================================
 # 4) MATRICE DE POSITIONNEMENT DES BANQUES (ACP/ACH)
@@ -839,21 +915,25 @@ with tab4:
     df_banque = df_banque[df_banque["Banque"].notna()]
     df_banque = df_banque[df_banque["Banque"].astype(str).str.strip() != ""]
 
-    # -----------------------------------------------------
+        # -----------------------------------------------------
     # 2) NETTOYAGE DES VALEURS
     # -----------------------------------------------------
     for col in ["Total_Nombre", "Total_Montant"]:
+        # On parcourt les deux colonnes à nettoyer : nombre total et montant total
         df_banque[col] = (
             df_banque[col]
-            .astype(str)
-            .str.replace(" ", "", regex=False)
-            .str.replace("—", "0", regex=False)
-            .str.replace("-", "0", regex=False)
-            .str.replace(",", "", regex=False)
+            .astype(str)                      # Conversion en chaîne de caractères pour appliquer les remplacements
+            .str.replace(" ", "", regex=False)  # Suppression des espaces (ex : "1 234" → "1234")
+            .str.replace("—", "0", regex=False) # Remplacement du tiret long par 0 (valeurs manquantes)
+            .str.replace("-", "0", regex=False) # Remplacement du tiret court par 0
+            .str.replace(",", "", regex=False)  # Suppression des virgules éventuelles dans les nombres
         )
         df_banque[col] = pd.to_numeric(df_banque[col], errors="coerce").fillna(0)
+        # Conversion en numérique ; les valeurs non convertibles deviennent NaN puis remplacées par 0
 
     df_banque["Montant_Milliards"] = df_banque["Total_Montant"] / 1e9
+    # Création d’une nouvelle colonne exprimant le montant en milliards (GNF ou autre devise)
+
 
     # -----------------------------------------------------
     # 3) CALCUL DES MOYENNES
@@ -909,7 +989,6 @@ with tab4:
 #=======================================
 # Évolution globale des opérations du RTGS
 # ==========================================
-
 with tab5:
 
     # Titre principal de la section RTGS
@@ -955,7 +1034,7 @@ with tab5:
         st.stop()
 
     # -----------------------------------------------------
-    # 4) EXTRACTION DES 12 MOIS (colonnes 0 à 6)
+    # 4) EXTRACTION DES 12 MOIS (colonnes 0 à 6) 
     # -----------------------------------------------------
     # On prend les lignes 2 à 13 (12 mois) et les colonnes 0 à 6 (7 colonnes utiles)
     df_var_rtgs = df_raw.iloc[2:14, 0:7].copy()
@@ -1024,12 +1103,46 @@ with tab5:
     plt.title(f"Dynamique Mensuelle du RTGS en {annee_B}")
 
     st.pyplot(fig)
+    
+        # -----------------------------------------------------
+    # 9) COURBES SUPERPOSÉES : VOLUME 2024 vs 2025
+    # -----------------------------------------------------
+    st.subheader(f"Comparaison des Volumes RTGS : {annee_A} vs {annee_B}")
 
-  
+    fig3, ax = plt.subplots(figsize=(12, 4))
+
+    # Courbe Volume année A (ex : 2024)
+    ax.plot(
+        df_var_rtgs["Mois"],
+        df_var_rtgs[f"Volume_{annee_A}"],
+        marker="o",
+        color="red",
+        linewidth=2,
+        label=f"Volume {annee_A}"
+    )
+
+    # Courbe Volume année B (ex : 2025)
+    ax.plot(
+        df_var_rtgs["Mois"],
+        df_var_rtgs[f"Volume_{annee_B}"],
+        marker="o",
+        color="green",
+        linewidth=2,
+        label=f"Volume {annee_B}"
+    )
+
+    # Mise en forme
+    ax.set_ylabel("Volume (Nombre d'opérations)")
+    ax.set_title(f"Tendance des Volumes RTGS : {annee_A} vs {annee_B}")
+    ax.legend()
+    plt.xticks(rotation=60, ha='right')
+
+    st.pyplot(fig3)
+
+
 # =========================================================
 # 6) RÉPARTITION DES RÈGLEMENTS RTGS PAR DEVISE
 # =========================================================    
-
 with tab6:
 
     # -----------------------------------------------------
@@ -1037,8 +1150,8 @@ with tab6:
     # -----------------------------------------------------
     df_devise = pd.read_excel(
         uploaded_file,
-        sheet_name="Variation Devise RTGS",
-        usecols="A:E"
+        sheet_name="Variation Devise RTGS",   # Feuille contenant les données par devise
+        usecols="A:E"                         # On ne lit que les colonnes A à E
     )
 
     # -----------------------------------------------------
@@ -1046,12 +1159,12 @@ with tab6:
     # -----------------------------------------------------
     df_devise.columns = (
         df_devise.columns
-        .astype(str)
-        .str.replace("\n", " ")
-        .str.replace("\r", " ")
-        .str.replace("\t", " ")
-        .str.replace("\xa0", " ")
-        .str.strip()
+        .astype(str)                          # Convertit les noms en chaînes
+        .str.replace("\n", " ")               # Supprime les retours à la ligne
+        .str.replace("\r", " ")               # Supprime les retours chariot
+        .str.replace("\t", " ")               # Supprime les tabulations
+        .str.replace("\xa0", " ")             # Supprime les espaces insécables
+        .str.strip()                          # Supprime les espaces en début/fin
     )
 
     # -----------------------------------------------------
@@ -1068,27 +1181,29 @@ with tab6:
     if annee is None:
         st.error("Impossible de détecter l’année dans la feuille 7‑Var Devise RTGS.")
         st.write("Colonnes détectées :", df_devise.columns.tolist())
-        st.stop()
+        st.stop()                             # On arrête l’exécution proprement
 
     # -----------------------------------------------------
     # TITRE DYNAMIQUE
     # -----------------------------------------------------
     st.header(f"Répartition des Règlements RTGS par Devise – Année {annee}")
+    # Affiche un titre contenant l’année détectée automatiquement
 
     # -----------------------------------------------------
     # 4) SUPPRESSION DES LIGNES VIDES
     # -----------------------------------------------------
     df_devise = df_devise.dropna(subset=[df_devise.columns[0]])
+    # Supprime les lignes où la colonne "Devise" est vide
 
     # -----------------------------------------------------
     # 5) RENOMMAGE DYNAMIQUE DES COLONNES
     # -----------------------------------------------------
     df_devise.columns = [
-        "Devise",
-        f"Volume_{annee}",
-        f"Valeur_{annee}_devise",
-        "ContreValeur_GNF",
-        "Part_marche"
+        "Devise",                              # Nom de la devise (GNF, USD, EUR)
+        f"Volume_{annee}",                     # Volume des transactions
+        f"Valeur_{annee}_devise",              # Valeur dans la devise d’origine
+        "ContreValeur_GNF",                    # Valeur convertie en GNF
+        "Part_marche"                          # Part de marché en %
     ]
 
     # -----------------------------------------------------
@@ -1097,59 +1212,65 @@ with tab6:
     for col in [f"Volume_{annee}", f"Valeur_{annee}_devise", "ContreValeur_GNF"]:
         df_devise[col] = (
             df_devise[col]
-            .astype(str)
-            .str.replace(" ", "")
-            .str.replace(",", ".")
+            .astype(str)                       # Convertit en texte pour nettoyage
+            .str.replace(" ", "")              # Supprime les espaces
+            .str.replace(",", ".")             # Remplace virgule → point
         )
         df_devise[col] = pd.to_numeric(df_devise[col], errors="coerce")
+        # Convertit en nombre ; remplace les erreurs par NaN
 
+    # Nettoyage de la colonne Part_marche (%)
     df_devise["Part_marche"] = (
         df_devise["Part_marche"]
         .astype(str)
-        .str.replace("%", "")
-        .str.replace(",", ".")
+        .str.replace("%", "")                  # Supprime le symbole %
+        .str.replace(",", ".")                 # Remplace virgule → point
     )
     df_devise["Part_marche"] = pd.to_numeric(df_devise["Part_marche"], errors="coerce")
+    # Convertit en nombre décimal (ex : 12.5)
 
     # -----------------------------------------------------
     # 7) SUPPRESSION DES NaN ET DE LA LIGNE TOTAL
     # -----------------------------------------------------
     df_devise = df_devise.dropna(subset=["Part_marche"])
+    # Supprime les lignes où la part de marché est vide
+
     df_devise = df_devise[df_devise["Devise"] != "TOTAL"]
+    # Supprime la ligne TOTAL qui fausserait les graphiques
 
     # -----------------------------------------------------
     # 8) AFFICHAGE DU TABLEAU
     # -----------------------------------------------------
     st.subheader(f"Tableau – Répartition par devise de règlement ({annee})")
-    #st.dataframe(df_devise)
-    df_affichage = format_dataframe(df_devise)
-    st.dataframe(df_affichage)
-
+    df_affichage = format_dataframe(df_devise)  # Mise en forme (séparateurs, alignement)
+    st.dataframe(df_affichage)                  # Affichage dans Streamlit
 
     # -----------------------------------------------------
     # 9) GRAPHIQUE DONUT AVEC LÉGENDE
     # -----------------------------------------------------
     st.subheader(f"Répartition des Règlements RTGS par Devise (en Valeur) – {annee}")
 
-    labels = df_devise["Devise"]
-    valeurs = df_devise["Part_marche"]
+    labels = df_devise["Devise"]               # Liste des devises
+    valeurs = df_devise["Part_marche"]         # Part de marché en %
 
-    couleurs = ["#4CAF50", "#2196F3", "#9C27B0"]  # GNF, USD, EUR
+    couleurs = ["#4CAF50", "#2196F3", "#9C27B0"]  # Couleurs : GNF, USD, EUR
 
-    fig, ax = plt.subplots(figsize=(6, 6))
+    fig, ax = plt.subplots(figsize=(6, 6))     # Création du graphique
 
     wedges, texts, autotexts = ax.pie(
-        valeurs,
-        labels=None,
-        colors=couleurs,
-        autopct="%1.1f%%",
-        startangle=90,
-        pctdistance=0.85
+        valeurs,                               # Valeurs à représenter
+        labels=None,                           # Pas de labels sur le donut
+        colors=couleurs,                       # Couleurs définies
+        autopct="%1.1f%%",                     # Format des pourcentages
+        startangle=90,                         # Rotation du graphique
+        pctdistance=0.85                       # Position du texte
     )
 
+    # Ajout du cercle blanc au centre → donut
     centre = plt.Circle((0, 0), 0.60, fc="white")
     fig.gca().add_artist(centre)
 
+    # Légende à droite
     ax.legend(
         labels,
         title="Devise",
@@ -1158,46 +1279,50 @@ with tab6:
     )
 
     plt.title(f"Répartition des Règlements RTGS par Devise (en Valeur) – {annee}")
-    st.pyplot(fig)
-    
+    st.pyplot(fig)                             # Affichage final du graphique
+
 
 # =========================================================
 # 7) ONGLET : CONTRIBUTION DES BANQUES AU SNP
 # =========================================================
 with tab7:
+    # On ouvre le 7ᵉ onglet de l’application Streamlit
 
     st.header("Contribution des Banques au Système National de Paiement (SNP)")
+    # Titre principal affiché en haut de l’onglet
 
     # -----------------------------------------------------
     # 1) LECTURE SANS HEADER
     # -----------------------------------------------------
     df_raw = pd.read_excel(uploaded_file, sheet_name="Variation Contribution SNP", header=None)
+    # Lecture brute de la feuille : pas d’en-têtes → header=None
 
     # -----------------------------------------------------
     # 2) EXTRACTION DES ANNÉES DANS LA LIGNE 1
     # -----------------------------------------------------
     ligne_annees = df_raw.iloc[1].astype(str).fillna("")
+    # On récupère la ligne 2 (index 1) qui contient les années, convertie en texte
 
     annees = []
     for val in ligne_annees:
-        match = re.search(r"(20\d{2})", val)
+        match = re.search(r"(20\d{2})", val)   # Recherche d’une année au format 20XX
         if match:
-            annees.append(match.group(1))
+            annees.append(match.group(1))      # Ajout de l’année trouvée
 
-    annees = list(dict.fromkeys(annees))  # suppression doublons
+    annees = list(dict.fromkeys(annees))       # Suppression des doublons en conservant l’ordre
 
     if len(annees) < 2:
         st.error("Impossible de détecter les années dans la feuille Contribution SNP.")
         st.write("Valeurs trouvées dans la ligne 2 :", ligne_annees.tolist())
-        st.stop()
+        st.stop()                              # Arrêt propre si les années ne sont pas détectées
 
-    annee1, annee2 = annees[:2]
+    annee1, annee2 = annees[:2]                # On prend les deux premières années détectées
     st.success(f"Années détectées : {annee1} et {annee2}")
 
     # -----------------------------------------------------
     # 3) RECONSTRUCTION DU DATAFRAME
     # -----------------------------------------------------
-    df_snp = df_raw.iloc[2:].copy()
+    df_snp = df_raw.iloc[2:].copy()            # On prend les lignes à partir de la ligne 3
     df_snp.columns = [
         "N",
         "Banque",
@@ -1206,46 +1331,55 @@ with tab7:
         f"Total_{annee1}", f"Total_{annee2}",
         "Variation"
     ]
+    # Attribution manuelle des noms de colonnes avec les années détectées
 
     # -----------------------------------------------------
     # 4) NETTOYAGE DES VALEURS
     # -----------------------------------------------------
-    for col in [f"Contribution_{annee1}", f"Contribution_{annee2}",
-                f"Service_Bureau_{annee1}", f"Service_Bureau_{annee2}",
-                f"Total_{annee1}", f"Total_{annee2}"]:
+    for col in [
+        f"Contribution_{annee1}", f"Contribution_{annee2}",
+        f"Service_Bureau_{annee1}", f"Service_Bureau_{annee2}",
+        f"Total_{annee1}", f"Total_{annee2}"
+    ]:
         df_snp[col] = (
-            df_snp[col].astype(str)
-            .str.replace(" ", "")
-            .str.replace(",", ".")
-            .str.replace("-", "0")
+            df_snp[col].astype(str)            # Conversion en texte pour nettoyage
+            .str.replace(" ", "")              # Suppression des espaces
+            .str.replace(",", ".")             # Remplacement virgule → point
+            .str.replace("-", "0")             # Tirets remplacés par 0
         )
         df_snp[col] = pd.to_numeric(df_snp[col], errors="coerce")
+        # Conversion en numérique ; erreurs → NaN
 
     df_snp["Variation"] = (
         df_snp["Variation"].astype(str)
-        .str.replace("%", "")
-        .str.replace(",", ".")
+        .str.replace("%", "")                  # Suppression du symbole %
+        .str.replace(",", ".")                 # Remplacement virgule → point
     )
     df_snp["Variation"] = pd.to_numeric(df_snp["Variation"], errors="coerce")
+    # Variation convertie en nombre décimal
 
     df_snp = df_snp.dropna(subset=["Banque"])
+    # Suppression des lignes sans nom de banque
 
     # -----------------------------------------------------
     # 5) TABLEAU
     # -----------------------------------------------------
     st.subheader(f"Tableau – Contribution SNP ({annee1}–{annee2})")
-    df_affichage = format_dataframe(df_snp)
-    st.dataframe(df_affichage)
+    df_affichage = format_dataframe(df_snp)    # Mise en forme (séparateurs, alignement)
+    st.dataframe(df_affichage)                 # Affichage du tableau
 
     # -----------------------------------------------------
     # 6) GRAPHIQUE EN BARRES HORIZONTALES AVEC VALEURS EN MILLIONS
     # -----------------------------------------------------
     df_plot = df_snp.sort_values(f"Total_{annee2}", ascending=True)
+    # Tri des banques par contribution croissante (année 2)
 
     fig, ax = plt.subplots(figsize=(8, 10))
     couleurs = plt.cm.GnBu(df_plot[f"Total_{annee2}"] / df_plot[f"Total_{annee2}"].max())
+    # Palette de couleurs graduelle selon la valeur
 
     bars = ax.barh(df_plot["Banque"], df_plot[f"Total_{annee2}"], color=couleurs)
+    # Barres horizontales représentant la contribution totale
 
     ax.set_title(f"Classement des Contributions au SNP ({annee2})", fontweight="bold")
     ax.set_xlabel("Montant de la Contribution (GNF)")
@@ -1254,26 +1388,30 @@ with tab7:
     # Affichage des valeurs au-dessus des barres en millions
     for bar in bars:
         valeur_millions = bar.get_width() / 1e6
-        ax.text(bar.get_width() + (df_plot[f"Total_{annee2}"].max() * 0.005),
-                bar.get_y() + bar.get_height() / 2,
-                f"{valeur_millions:.0f} M",
-                va="center", fontsize=8, color="black")
+        ax.text(
+            bar.get_width() + (df_plot[f"Total_{annee2}"].max() * 0.005),
+            bar.get_y() + bar.get_height() / 2,
+            f"{valeur_millions:.0f} M",
+            va="center", fontsize=8, color="black"
+        )
+    # Ajoute la valeur en millions à droite de chaque barre
 
     plt.tight_layout()
-    st.pyplot(fig)
+    st.pyplot(fig)                             # Affichage du graphique
 
     # -----------------------------------------------------
     # 7) ANALYSE AUTOMATIQUE
     # -----------------------------------------------------
-    total_annee1 = df_snp[f"Total_{annee1}"].sum()
-    total_annee2 = df_snp[f"Total_{annee2}"].sum()
+    total_annee1 = df_snp[f"Total_{annee1}"].sum()   # Somme totale année 1
+    total_annee2 = df_snp[f"Total_{annee2}"].sum()   # Somme totale année 2
     croissance = (total_annee2 - total_annee1) / total_annee1 * 100
-    top = df_plot.iloc[-1]
+    # Calcul du taux de croissance global
+
+    top = df_plot.iloc[-1]                           # Banque ayant la plus forte contribution
 
     st.write(f"""
     **Total {annee2} :** {total_annee2:,.0f} GNF  
     **Croissance :** {croissance:.2f} %  
     **Leader :** {top["Banque"]} ({top[f"Total_{annee2}"]/1e6:.0f} M GNF)
     """)
-    
- 
+    # Analyse automatique affichée sous forme de texte
