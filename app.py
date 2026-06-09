@@ -343,7 +343,7 @@ elif menu_principal == "Analyse Semestrielle":
 # ============================================================
 elif menu_principal == "Analyse Annuelle":
 
-    st.header("📊 Analyse Annuelle ACP/ACH")
+    st.header("📊 Analyse Annuelle des flux sur les Systèmes de Paiement")
 
     st.markdown("### 🆘 Aide")
 
