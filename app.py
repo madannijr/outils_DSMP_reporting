@@ -138,7 +138,7 @@ if menu_principal == "Analyse Trimestrielle":
 
     # Choix du type de flux
     type_flux = st.radio(
-        "Choisir le type de flux à analyser",
+        "Choisir le type de Système de Paiement",
         ["ACP/ACH", "RTGS"],
         horizontal=True
     )
