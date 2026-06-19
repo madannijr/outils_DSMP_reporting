@@ -202,16 +202,27 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
     st.pyplot(fig1)
 
     # -----------------------------------------------------
-    # 🔹 Graphique des montants
+    # 🔹 Graphique des montants (affichage en milliards GNF)
     # -----------------------------------------------------
     fig2, ax2 = plt.subplots(figsize=(14, 5))
+    x = range(len(df_graph))
+    width = 0.35
 
-    ax2.bar([i - width/2 for i in x], df_graph[f"Montant_{trimestre_detecte}_{annee1}"], width, label=str(annee1))
-    ax2.bar([i + width/2 for i in x], df_graph[f"Montant_{trimestre_detecte}_{annee2}"], width, label=str(annee2))
+    # Conversion des montants en milliards GNF
+    ax2.bar([i - width/2 for i in x], df_graph[f"Montant_{trimestre_detecte}_{annee1}"] / 1e9, width, label=str(annee1))
+    ax2.bar([i + width/2 for i in x], df_graph[f"Montant_{trimestre_detecte}_{annee2}"] / 1e9, width, label=str(annee2))
 
+    # Personnalisation du graphique
     ax2.set_title(f"Évolution des montants de {trimestre_detecte} ({annee1} → {annee2}) — {instrument.capitalize()}")
     ax2.set_xticks(list(x))
     ax2.set_xticklabels(df_graph["Banque"], rotation=45, ha="right")
+    ax2.set_ylabel("Montant (Milliards GNF)")
     ax2.legend()
     ax2.grid(axis="y", linestyle="--", alpha=0.7)
+
+    # Ajustement automatique de l’échelle Y selon les données
+    ax2.set_ylim(0, df_graph[f"Montant_{trimestre_detecte}_{annee2}"].max() / 1e9 * 1.1)
+
+    # Affichage du graphique
     st.pyplot(fig2)
+

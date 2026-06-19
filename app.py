@@ -285,8 +285,9 @@ elif menu_principal == "Analyse Semestrielle":
 
             analyse_semestrielle(
                 st.session_state.fichier_T1,
-                st.session_state.fichier_T2
-            )
+                st.session_state.fichier_T2,
+                "S1"
+)
 
         st.stop()
 
@@ -296,6 +297,7 @@ elif menu_principal == "Analyse Semestrielle":
     if sous_menu == "S2":
 
         st.subheader("📂 Importation des fichiers T3 et T4")
+        st.info("Utiliser les fichiers modèles des trimestres pour le semestre correspondant")
 
         fichier_T3 = st.file_uploader(
             f"Importer le fichier T3 ({type_flux})",
@@ -334,8 +336,9 @@ elif menu_principal == "Analyse Semestrielle":
 
             analyse_semestrielle(
                 st.session_state.fichier_T3,
-                st.session_state.fichier_T4
-            )
+                st.session_state.fichier_T4,
+                "S2"
+)
 
         st.stop()
 # ============================================================
@@ -354,19 +357,19 @@ elif menu_principal == "Analyse Annuelle":
 
         try:
 
-            with open("modele_dsmp.xlsx", "rb") as f:
+            with open("modele_rapport_annuel.xlsx", "rb") as f:
 
                 st.download_button(
                     label="📄 Télécharger le fichier modèle",
                     data=f.read(),
-                    file_name="modele_dsmp.xlsx",
+                    file_name="modele_rapport_annuel.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
         except FileNotFoundError:
 
             st.error(
-                "❌ Le fichier 'modele_dsmp.xlsx' est introuvable."
+                "❌ Le fichier modèle est introuvable."
             )
 
     # ========================================================
@@ -400,37 +403,42 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Contribution SNP",
 ])
 
-
-
-# =========================================================
+   
+   # =========================================================
 # 1) ONGLET : ÉVOLUTION GLOBALE ACP/ACH
 # =========================================================
 with tab1:
 
     # -----------------------------------------------------
-    # Titre principal de l’onglet
+    # Titre principal
     # -----------------------------------------------------
     st.header("Évolution Globale ACP/ACH")
 
     # -----------------------------------------------------
-    # Lecture du fichier Excel et sélection de la feuille
+    # Lecture du fichier
     # -----------------------------------------------------
-    df_raw = pd.read_excel(uploaded_file, sheet_name="Evolution Globale ACPACH")
+    df_raw = pd.read_excel(
+        uploaded_file,
+        sheet_name="Evolution Globale ACPACH"
+    )
 
     # -----------------------------------------------------
-    # Détection automatique des années dans les colonnes
+    # Détection automatique des années
     # -----------------------------------------------------
-    colonnes_volume = [c for c in df_raw.columns if "Volume" in c]
-    annee1 = colonnes_volume[0].split()[1]  # première année détectée
-    annee2 = colonnes_volume[1].split()[1]  # deuxième année détectée
+    colonnes_volume = [
+        c for c in df_raw.columns
+        if "Volume" in c
+    ]
+
+    annee1 = colonnes_volume[0].split()[1]
+    annee2 = colonnes_volume[1].split()[1]
+
+    st.success(
+        f"Années détectées : {annee1} et {annee2}"
+    )
 
     # -----------------------------------------------------
-    # Affichage des années détectées
-    # -----------------------------------------------------
-    st.success(f"Années détectées : {annee1} et {annee2}")
-
-    # -----------------------------------------------------
-    # Renommage des colonnes pour uniformiser le DataFrame
+    # Renommage colonnes
     # -----------------------------------------------------
     df_raw.columns = [
         "Instrument",
@@ -441,104 +449,168 @@ with tab1:
         f"Valeur_{annee2}",
         "Variation_Valeur"
     ]
+
     df = df_raw.copy()
 
     # -----------------------------------------------------
-    # Suppression de la ligne TOTAL pour éviter les doublons
+    # Suppression TOTAL
     # -----------------------------------------------------
-    df = df[df["Instrument"] != "TOTAL"]
+    df = df[
+        df["Instrument"]
+        .astype(str)
+        .str.upper()
+        != "TOTAL"
+    ]
 
     # -----------------------------------------------------
-    # Affichage du tableau des indicateurs formaté
+    # Tableau
     # -----------------------------------------------------
     st.subheader("Tableau des indicateurs")
-    df_affichage = format_dataframe(df)  # formatage en style français
-    st.dataframe(df_affichage)
+
+    df_affichage = format_dataframe(df)
+
+    st.dataframe(
+        df_affichage,
+        use_container_width=True
+    )
 
     # -----------------------------------------------------
-    # Préparation des variables pour les graphiques
+    # Variables graphiques
     # -----------------------------------------------------
     instruments = df["Instrument"]
-    x = np.arange(len(instruments))
-    width = 0.35
 
-    # =====================================================
-    # 🔹 PREMIER GRAPHIQUE : COMPARAISON DES VOLUMES
-    # =====================================================
-    st.subheader(f"Volumes ACP/ACH ({annee1} vs {annee2})")
-
-    fig, ax = plt.subplots(figsize=(8, 3.5))
-
-    # 🔹 Couleurs cohérentes et harmonisées
-    couleur_annee1 = "#1F77B4"  # Bleu pour 2024
-    couleur_annee2 = "#F39C12"  # Orange pour 2025
-    bar_height = 0.35
-
-    # 🔹 Barres côte à côte (non superposées)
-    x = np.arange(len(instruments))
-    ax.barh(x - bar_height/2, df[f"Volume_{annee1}"], height=bar_height, color=couleur_annee1, label=f"{annee1}")
-    ax.barh(x + bar_height/2, df[f"Volume_{annee2}"], height=bar_height, color=couleur_annee2, label=f"{annee2}")
-
-    # 🔹 Personnalisation du graphique
-    ax.set_yticks(x)
-    ax.set_yticklabels(instruments, fontsize=10)
-    ax.set_xlabel("Volume des transactions", fontsize=10)
-    ax.set_ylabel("Instrument", fontsize=10)
-    ax.set_title("Comparaison des volumes ACP/ACH par instrument", fontsize=12, fontweight="bold")
-
-    # 🔹 Légende encadrée à droite (comme l’ancien style)
-    legend = ax.legend(
-        loc="upper right",      # position à droite
-        frameon=True,           # cadre visible
-        edgecolor="black",      # bordure noire
-        facecolor="white",      # fond blanc
-        fontsize=9
+    x = np.arange(
+        len(instruments)
     )
-    legend.get_frame().set_linewidth(0.8)  # finesse du cadre
 
-    # 🔹 Nettoyage visuel : fond clair + suppression des cadres inutiles
-    ax.set_facecolor("#F8F9F9")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_visible(False)
-    ax.spines["bottom"].set_visible(False)
-
-    # 🔹 Ajustement de la mise en page
-    plt.tight_layout()
-    st.pyplot(fig)
-
-    
-
-
-    # =====================================================
-    # 🔹 DEUXIÈME GRAPHIQUE : ÉVOLUTION DES VOLUMES
-    # =====================================================
-    st.subheader(f"Évolution des volumes ACP/ACH ({annee1} → {annee2})")
-
-    fig, ax1 = plt.subplots(figsize=(8, 3.5))
-    x = np.arange(len(instruments))
     width = 0.35
 
-    # Barres pour les volumes des deux années
-    ax1.bar(x - width/2, df[f"Volume_{annee1}"], width, label=annee1, color="#1f77b4")
-    ax1.bar(x + width/2, df[f"Volume_{annee2}"], width, label=annee2, color="#ff7f0e")
-    ax1.set_xticks(x)
-    ax1.set_xticklabels(instruments)
-    ax1.set_ylabel("Volume des transactions")
-    ax1.legend(loc="upper left")
+    # =====================================================
+    # GRAPHIQUE 1
+    # ÉVOLUTION DES VOLUMES
+    # =====================================================
 
-    # Ligne verte pour la variation en pourcentage
-    ax2 = ax1.twinx()
-    ax2.plot(x, df["Variation_Volume"] * 100, color="green", marker="o", label="Variation (%)")
-    ax2.set_ylabel("Variation en %")
+    st.markdown(
+        f"""
+        <h2 style='color:#1F77B4;'>
+        📊 ÉVOLUTION DES VOLUMES ACP/ACH
+        ({annee1} vs {annee2})
+        </h2>
+        """,
+        unsafe_allow_html=True
+    )
+
+    fig1, ax1 = plt.subplots(
+        figsize=(8, 4)
+    )
+
+    ax1.barh(
+        x - 0.2,
+        df[f"Volume_{annee1}"],
+        height=0.35,
+        color="#1F77B4",
+        label=annee1
+    )
+
+    ax1.barh(
+        x + 0.2,
+        df[f"Volume_{annee2}"],
+        height=0.35,
+        color="#F39C12",
+        label=annee2
+    )
+
+    ax1.set_yticks(x)
+
+    ax1.set_yticklabels(
+        instruments
+    )
+
+    ax1.set_xlabel(
+        "Volume des transactions"
+    )
+
+    ax1.set_title(
+        "Comparaison des volumes ACP/ACH par instrument",
+        fontsize=12,
+        fontweight="bold"
+    )
+
+    ax1.legend(
+        loc="upper right"
+    )
+
+    ax1.set_facecolor(
+        "#F8F9F9"
+    )
+
+    for spine in [
+        "top",
+        "right",
+        "left",
+        "bottom"]:
+        ax1.spines[spine].set_visible(False)
+
+    plt.tight_layout()
+
+    st.pyplot(fig1)
+
+    # =====================================================
+    # GRAPHIQUE 2
+    # ÉVOLUTION DES VALEURS
+    # =====================================================
+
+    st.markdown(f"""<h2 style='color:#E67E22;'>
+        💰 ÉVOLUTION DES VALEURS ACP/ACH(Milliards GNF)({annee1} vs {annee2})</h2>""",
+        unsafe_allow_html=True)
+
+    fig2, ax2 = plt.subplots(figsize=(8, 4))
+
+    ax2.bar(
+        x - width/2,
+        df[f"Valeur_{annee1}"],
+        width,
+        label=annee1,
+        color="#A04000"
+    )
+
+    ax2.bar(
+        x + width/2,
+        df[f"Valeur_{annee2}"],
+        width,
+        label=annee2,
+        color="#F5B041"
+    )
+
+    ax2.set_xticks(x)
+
+    ax2.set_xticklabels( instruments)
+    ax2.set_ylabel("Valeur des transactions (Milliards GNF)")
+
+    ax2.set_title(
+        "Comparaison des valeurs ACP/ACH par instrument",
+        fontsize=12,
+        fontweight="bold"
+    )
+
     ax2.legend(loc="upper right")
 
-    # Ajout des annotations de taux de variation au-dessus des points
-    for i, val in enumerate(df["Variation_Volume"] * 100):
-        ax2.text(x[i], val + 0.5, f"{val:.2f}%", color="green", ha="center", fontsize=8)
+    ax2.set_facecolor(
+        "#F8F9F9"
+    )
 
-    # Affichage du graphique final
-    st.pyplot(fig)
+    for spine in [
+        "top",
+        "right",
+        "left",
+        "bottom"
+    ]:
+        ax2.spines[spine].set_visible(False)
+
+    plt.tight_layout()
+
+    st.pyplot(fig2)
+
 
 # =========================================================
 # 2) ONGLET : PARTS DE MARCHÉ
@@ -1138,6 +1210,45 @@ with tab5:
     plt.xticks(rotation=60, ha='right')
 
     st.pyplot(fig3)
+    
+    
+    
+    # -----------------------------------------------------
+    # 10) COURBES SUPERPOSÉES : MONTANTS 2024 vs 2025
+    # -----------------------------------------------------
+    st.subheader(f"Comparaison des Montants RTGS : {annee_A} vs {annee_B}")
+
+    fig4, ax = plt.subplots(figsize=(12, 4))
+
+    # Courbe Montant année A (ex : 2024)
+    ax.plot(
+        df_var_rtgs["Mois"],
+        df_var_rtgs[f"Valeur_{annee_A}"] / 1e9,  # conversion en milliards GNF
+        marker="o",
+        color="darkorange",
+        linewidth=2,
+        label=f"Montant {annee_A}"
+    )
+
+    # Courbe Montant année B (ex : 2025)
+    ax.plot(
+        df_var_rtgs["Mois"],
+        df_var_rtgs[f"Valeur_{annee_B}"] / 1e9,  # conversion en milliards GNF
+        marker="o",
+        color="seagreen",
+        linewidth=2,
+        label=f"Montant {annee_B}"
+    )
+
+    # Mise en forme
+    ax.set_ylabel("Montant (Milliards GNF)")
+    ax.set_title(f"Tendance des Montants RTGS : {annee_A} vs {annee_B}")
+    ax.legend()
+    plt.xticks(rotation=60, ha='right')
+
+    st.pyplot(fig4)
+
+    
 
 
 # =========================================================

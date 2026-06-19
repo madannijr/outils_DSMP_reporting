@@ -7,6 +7,8 @@ import numpy as np                   # Calculs numériques
 import matplotlib.pyplot as plt      # Graphiques
 import re                            # Expressions régulières (extraction d'année)
 from fonctions_utils import format_dataframe  # Formatage esthétique des tableaux
+from export_excel import telecharger_excel
+
 
 # ============================================================
 # 🔹 Fonction : Conversion propre des montants
@@ -34,17 +36,24 @@ def extraire_annee(col):
 # 🔹 Fonction : Détection automatique du trimestre (T1, T2, T3, T4)
 # ============================================================
 def detecter_trimestre(df):
-    colonnes = " ".join([str(c).upper() for c in df.columns])  # Regroupe toutes les colonnes
+    colonnes = [str(c).upper().strip() for c in df.columns]
 
-    # Recherche des mentions T1, T2, T3, T4 dans les noms de colonnes
-    if "_T1_" in colonnes or "T1_" in colonnes or "_T1" in colonnes:
-        return "T1"
-    if "_T2_" in colonnes or "T2_" in colonnes or "_T2" in colonnes:
-        return "T2"
-    if "_T3_" in colonnes or "T3_" in colonnes or "_T3" in colonnes:
-        return "T3"
-    if "_T4_" in colonnes or "T4_" in colonnes or "_T4" in colonnes:
-        return "T4"
+    trimestres = []
+
+    for col in colonnes:
+        if "_T1_" in col:
+            trimestres.append("T1")
+        elif "_T2_" in col:
+            trimestres.append("T2")
+        elif "_T3_" in col:
+            trimestres.append("T3")
+        elif "_T4_" in col:
+            trimestres.append("T4")
+
+    trimestres = list(set(trimestres))
+
+    if len(trimestres) == 1:
+        return trimestres[0]
 
     return None  # Aucun trimestre trouvé
 
@@ -64,7 +73,7 @@ def nettoyer(df):
 # ============================================================
 # 🔹 Fonction principale : Analyse Semestrielle
 # ============================================================
-def analyse_semestrielle(fichier_A, fichier_B):
+def analyse_semestrielle(fichier_A, fichier_B, semestre):
 
     st.header("Analyse Semestrielle ACP/ACH")  # Titre principal
 
@@ -108,26 +117,25 @@ def analyse_semestrielle(fichier_A, fichier_B):
             .str.strip()
         )
 
-    # Détection des trimestres réels dans chaque fichier
-    tri_A = detecter_trimestre(df_A)
-    tri_B = detecter_trimestre(df_B)
+    # ====================================================
+    # Détermination directe du semestre choisi
+    # ====================================================
 
-    # Vérification que la paire est valide : (T1,T2) ou (T3,T4)
-    paire = {tri_A, tri_B}
-    if paire == {"T1", "T2"}:
-        semestre_label = "S1"
-        tA, tB = ("T1", "T2")
-    elif paire == {"T3", "T4"}:
-        semestre_label = "S2"
-        tA, tB = ("T3", "T4")
+    semestre_label = semestre
+
+    if semestre == "S1":
+        tA = "T1"
+        tB = "T2"
+
+    elif semestre == "S2":
+        tA = "T3"
+        tB = "T4"
+
     else:
-        st.error(
-            "❌ Les fichiers fournis ne forment pas une paire valide pour un semestre.\n"
-            "Attendu : (T1 + T2) pour S1 ou (T3 + T4) pour S2.\n"
-            f"Trimestre détecté fichier A : {tri_A}\n"
-            f"Trimestre détecté fichier B : {tri_B}"
-        )
+        st.error("Semestre invalide")
         return
+
+    st.success(f"Analyse {semestre_label} : {tA} + {tB}")
 
     # Nettoyage général
     df_A = nettoyer(df_A)
@@ -178,10 +186,12 @@ def analyse_semestrielle(fichier_A, fichier_B):
         col_B_mt_annee2 = [c for c in colonnes_montant if f"{tB}_{annee2}" in c][0]
     except IndexError:
         st.error(
-            "❌ Les colonnes attendues pour les trimestres/années n'ont pas été trouvées.\n"
-            "Vérifiez que les colonnes contiennent les mentions T1_/T2_/T3_/T4_ suivies de l'année."
+            "❌ Les fichiers importés ne correspondent pas au semestre attendu.\n"
+            "Pour S1, seuls les fichiers des trimestres T1 et T2 sont acceptés.\n"
+            "Pour S2, seuls les fichiers des trimestres T3 et T4 sont acceptés.\n"
+            "Veuillez vérifier que vous avez bien sélectionné les fichiers du bon trimestre pour le semestre choisi."
         )
-        st.write("Colonnes détectées :", df.columns.tolist())
+        #st.write("Colonnes détectées :", df.columns.tolist())
         return
 
     # Conversion numérique des colonnes
@@ -244,6 +254,8 @@ def analyse_semestrielle(fichier_A, fichier_B):
 
     # ====== VISUEL 1 : TABLEAU ======
     st.subheader(f"📊 Analyse {semestre_label} — {annee1} vs {annee2} — {instrument.capitalize()}")
+    st.subheader("📥 Télécharger le tableau semestriel")
+    telecharger_excel(df_aff)
     st.dataframe(format_dataframe(df_aff))
 
     df_graph = df_aff[df_aff["Banque"] != "TOTAUX"]
@@ -276,43 +288,4 @@ def analyse_semestrielle(fichier_A, fichier_B):
     ax2.grid(axis="y", linestyle="--", alpha=0.7)
     st.pyplot(fig2)
 
-    # ============================================================
-    # 🔹 VISUEL 4 : COMPARAISON TRIMESTRIELLE
-    # ============================================================
-    st.subheader(f"📈 Comparaison {tA} vs {tB} — Volumes & Montants ({annee2})")
-
-    fig, ax1 = plt.subplots(figsize=(16, 6))
-    x = np.arange(len(df_graph))
-
-    # --- AXE Y1 : VOLUMES ---
-    ax1.set_ylabel("Volumes (Nombre)", color="tab:blue")
-    ax1.plot(x, A_nb_annee2, marker="o", linestyle="-",  linewidth=2, color="tab:blue")
-    ax1.plot(x, B_nb_annee2, marker="o", linestyle="--", linewidth=2, color="tab:blue")
-    ax1.tick_params(axis="y", labelcolor="tab:blue")
-
-    # --- AXE Y2 : MONTANTS ---
-    ax2 = ax1.twinx()
-    ax2.set_ylabel("Montants (GNF)", color="tab:orange")
-    ax2.plot(x, A_mt_annee2, marker="s", linestyle="-",  linewidth=2, color="tab:orange")
-    ax2.plot(x, B_mt_annee2, marker="s", linestyle="--", linewidth=2, color="tab:orange")
-    ax2.tick_params(axis="y", labelcolor="tab:orange")
-
-    # --- AXE X ---
-    ax1.set_xticks(x)
-    ax1.set_xticklabels(df_graph["Banque"], rotation=45, ha="right")
-
-    # --- LEGENDE DYNAMIQUE ---
-    from matplotlib.lines import Line2D
-    legend_elements = [
-        Line2D([0], [0], marker='o', linestyle='-', linewidth=2,
-            color='tab:blue', label=f'Volumes ({tA}/{tB})'),
-        Line2D([0], [0], marker='s', linestyle='-', linewidth=2,
-            color='tab:orange', label=f'Montants ({tA}/{tB})')
-    ]
-    ax1.legend(handles=legend_elements, loc="upper left")
-
-    # --- TITRE + GRILLE ---
-    plt.title(f"Comparaison {tA} vs {tB} — Volumes & Montants ({annee2}) — {instrument.capitalize()}")
-    ax1.grid(True, linestyle="--", alpha=0.5)
-
-    st.pyplot(fig)
+   
