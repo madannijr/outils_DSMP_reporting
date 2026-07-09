@@ -7,7 +7,7 @@ import numpy as np                   # Calculs numériques
 import matplotlib.pyplot as plt      # Graphiques
 import re                            # Expressions régulières (extraction d'année)
 from fonctions_utils import format_dataframe  # Formatage esthétique des tableaux
-from export_excel import telecharger_excel
+from utils import telecharger_excel
 
 
 # ============================================================
@@ -255,7 +255,7 @@ def analyse_semestrielle(fichier_A, fichier_B, semestre):
     # ====== VISUEL 1 : TABLEAU ======
     st.subheader(f"📊 Analyse {semestre_label} — {annee1} vs {annee2} — {instrument.capitalize()}")
     st.subheader("📥 Télécharger le tableau semestriel")
-    telecharger_excel(df_aff)
+    telecharger_excel(df_aff) # Button de telechargement en fichier Excel
     st.dataframe(format_dataframe(df_aff))
 
     df_graph = df_aff[df_aff["Banque"] != "TOTAUX"]
