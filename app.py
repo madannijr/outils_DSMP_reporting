@@ -12,7 +12,7 @@ from utils import telecharger_graphique
 from utils import charger_css
 
 # Charger le CSS 
-#charger_css("styles.css")
+charger_css("styles.css")
 
 
 # ============================================================
