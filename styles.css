@@ -24,3 +24,23 @@
     background-color: #27ae60 !important;
     color: white !important;
 }
+
+
+/* 🎯 Style pour les onglets Streamlit (compatible local + cloud) */
+div[data-baseweb="tab"] {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    background-color: #00695c !important;
+    border-radius: 5px !important;
+    padding: 8px 12px !important;
+    margin-right: 6px !important;
+}
+
+div[data-baseweb="tab"]:hover {
+    background-color: #004d40 !important;
+}
+
+div[data-baseweb="tab"][aria-selected="true"] {
+    border-bottom: 3px solid #e74c3c !important;
+}
