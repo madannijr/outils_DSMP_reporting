@@ -1,46 +1,95 @@
-/* 🎯 Style pour les boutons de téléchargement (local) */
-.stDownloadButton > button {
-    background-color: #2ecc71 !important;
-    color: white !important;
-    border-radius: 8px !important;
-    padding: 8px 16px !important;
-    font-weight: bold !important;
-    border: none !important;
-}
+/* ============================================================
+   ONGlets Streamlit - Compatible local et Streamlit Cloud
+   ============================================================ */
 
-/* 🎯 Style pour les boutons de téléchargement (Streamlit Cloud) */
-.stButton button {
-    background-color: #2ecc71 !important;
-    color: white !important;
-    border-radius: 8px !important;
-    padding: 8px 16px !important;
-    font-weight: bold !important;
-    border: none !important;
-}
-
-/* Survol */
-.stButton button:hover,
-.stDownloadButton > button:hover {
-    background-color: #27ae60 !important;
-    color: white !important;
-}
-
-
-/* 🎯 Style pour les onglets Streamlit (compatible local + cloud) */
-div[data-baseweb="tab"] {
+.stTabs [data-baseweb="tab"] {
     font-size: 15px !important;
     font-weight: 600 !important;
-    color: #ffffff !important;
+    color: white !important;
     background-color: #00695c !important;
     border-radius: 5px !important;
     padding: 8px 12px !important;
     margin-right: 6px !important;
+    border: none !important;
 }
 
-div[data-baseweb="tab"]:hover {
+/* Survol */
+.stTabs [data-baseweb="tab"]:hover {
     background-color: #004d40 !important;
+    color: white !important;
 }
 
-div[data-baseweb="tab"][aria-selected="true"] {
+/* Onglet sélectionné */
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+    background-color: #004d40 !important;
+    color: white !important;
     border-bottom: 3px solid #e74c3c !important;
+}
+
+/* Texte à l'intérieur de l'onglet */
+.stTabs [data-baseweb="tab"] p {
+    color: white !important;
+    font-weight: 600 !important;
+}
+
+/* Ligne sous les onglets */
+.stTabs [data-baseweb="tab-highlight"] {
+    background-color: #e74c3c !important;
+}
+
+
+/* ============================================================
+   RÉDUCTION DE LA TAILLE GÉNÉRALE
+   ============================================================ */
+
+/* Texte général */
+html, body, [class*="css"] {
+    font-size: 13px !important;
+}
+
+/* Paragraphes */
+p {
+    font-size: 13px !important;
+}
+
+/* Titres */
+h1 {
+    font-size: 24px !important;
+}
+
+h2 {
+    font-size: 20px !important;
+}
+
+h3 {
+    font-size: 17px !important;
+}
+
+/* Labels et textes des widgets */
+label {
+    font-size: 13px !important;
+}
+
+/* Texte des boutons */
+.stButton button,
+.stDownloadButton button {
+    font-size: 13px !important;
+    padding: 6px 12px !important;
+}
+
+/* ============================================================
+   RÉDUCTION DES IMAGES
+   ============================================================ */
+
+/* Images affichées avec st.image */
+.stImage img {
+    max-width: 75% !important;
+    height: auto !important;
+    margin: auto !important;
+}
+
+/* Images dans les colonnes */
+[data-testid="column"] .stImage img {
+    max-width: 80% !important;
+    height: auto !important;
 }
