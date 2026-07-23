@@ -1,6 +1,6 @@
-/* Style pour les boutons de téléchargement Streamlit */
+/* 🎯 Style pour les boutons de téléchargement (local) */
 .stDownloadButton > button {
-    background-color: #2ecc71 !important;   /* Vert */
+    background-color: #2ecc71 !important;
     color: white !important;
     border-radius: 8px !important;
     padding: 8px 16px !important;
@@ -8,7 +8,19 @@
     border: none !important;
 }
 
+/* 🎯 Style pour les boutons de téléchargement (Streamlit Cloud) */
+.stButton button {
+    background-color: #2ecc71 !important;
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    font-weight: bold !important;
+    border: none !important;
+}
+
+/* Survol */
+.stButton button:hover,
 .stDownloadButton > button:hover {
-    background-color: #27ae60 !important;   /* Vert foncé */
+    background-color: #27ae60 !important;
     color: white !important;
 }

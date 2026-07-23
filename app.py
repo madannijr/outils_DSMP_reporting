@@ -8,8 +8,8 @@ from fonctions_utils import format_dataframe
 from analyse_trimestrielle import analyse_trimestrielle
 from analyse_semestrielle import analyse_semestrielle
 from modeles_trimestres import telecharger_modele_trimestre
-from utils import charger_css
 from utils import telecharger_graphique
+from utils import charger_css
 
 # Charger le CSS 
 charger_css("styles.css")
