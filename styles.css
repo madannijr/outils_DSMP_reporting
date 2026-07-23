@@ -1,0 +1,14 @@
+/* Style pour les boutons de téléchargement Streamlit */
+.stDownloadButton > button {
+    background-color: #2ecc71 !important;   /* Vert */
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    font-weight: bold !important;
+    border: none !important;
+}
+
+.stDownloadButton > button:hover {
+    background-color: #27ae60 !important;   /* Vert foncé */
+    color: white !important;
+}

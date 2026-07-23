@@ -7,6 +7,7 @@ import numpy as np           # Calculs numériques
 import matplotlib.pyplot as plt  # Graphiques
 import re                    # Expressions régulières (extraction d'année)
 from fonctions_utils import format_dataframe  # Formatage tableau
+from utils import telecharger_graphique
 
 # ============================================================
 # 🔹 Fonction : Conversion propre des montants
@@ -22,7 +23,7 @@ def convertir(df, col):
         .apply(lambda x: pd.to_numeric(x, errors="coerce"))  # Convertit en numérique
         .fillna(0)                           # Remplace NaN par 0
     )
-
+    
 # ============================================================
 # 🔹 Fonction : Extraction automatique des années
 # ============================================================
@@ -199,6 +200,11 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
     ax1.set_xticklabels(df_graph["Banque"], rotation=45, ha="right")
     ax1.legend()
     ax1.grid(axis="y", linestyle="--", alpha=0.7)
+    #######################################################################
+    nom_base = f"Evolution des nombres_{instrument}_{trimestre_detecte}_{annee2}_nombres"
+    telecharger_graphique(fig1, nom_base, key=f"graph_nombres_{instrument}_{trimestre_detecte}")
+    ########################################################################
+   
     st.pyplot(fig1)
 
     # -----------------------------------------------------
@@ -222,7 +228,12 @@ def analyse_trimestrielle(uploaded_file, trimestre_attendu):
 
     # Ajustement automatique de l’échelle Y selon les données
     ax2.set_ylim(0, df_graph[f"Montant_{trimestre_detecte}_{annee2}"].max() / 1e9 * 1.1)
+    
+    #######################################################################
+    nom_base = f"Evolution des montants_{instrument}_{trimestre_detecte}_{annee2}_montants"
+    telecharger_graphique(fig2, nom_base, key=f"graph_montants_{instrument}_{trimestre_detecte}")
 
+    ########################################################################
     # Affichage du graphique
     st.pyplot(fig2)
 

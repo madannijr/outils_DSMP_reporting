@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt      # Graphiques
 import re                            # Expressions régulières (extraction d'année)
 from fonctions_utils import format_dataframe  # Formatage esthétique des tableaux
 from utils import telecharger_excel
+from utils import telecharger_graphique
+
 
 
 # ============================================================
@@ -273,6 +275,9 @@ def analyse_semestrielle(fichier_A, fichier_B, semestre):
     ax1.set_xticklabels(df_graph["Banque"], rotation=45, ha="right")
     ax1.legend()
     ax1.grid(axis="y", linestyle="--", alpha=0.7)
+    # 🔽 AJOUT DU BOUTON DE TÉLÉCHARGEMENT
+    nom_base = f"Evolution_nombres_{instrument}_{semestre_label}_{annee2}"
+    telecharger_graphique(fig1, nom_base, key=f"sem_graph_nombres_{instrument}_{semestre_label}")
     st.pyplot(fig1)
 
     # ====== VISUEL 3 : BARRES MONTANT ======
@@ -286,6 +291,9 @@ def analyse_semestrielle(fichier_A, fichier_B, semestre):
     ax2.set_xticklabels(df_graph["Banque"], rotation=45, ha="right")
     ax2.legend()
     ax2.grid(axis="y", linestyle="--", alpha=0.7)
+    # 🔽 AJOUT DU BOUTON DE TÉLÉCHARGEMENT
+    nom_base = f"Evolution_montants_{instrument}_{semestre_label}_{annee2}"
+    telecharger_graphique(fig2, nom_base, key=f"sem_graph_montants_{instrument}_{semestre_label}")
     st.pyplot(fig2)
 
    

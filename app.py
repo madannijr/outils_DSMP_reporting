@@ -8,7 +8,11 @@ from fonctions_utils import format_dataframe
 from analyse_trimestrielle import analyse_trimestrielle
 from analyse_semestrielle import analyse_semestrielle
 from modeles_trimestres import telecharger_modele_trimestre
+from utils import charger_css
+from utils import telecharger_graphique
 
+# Charger le CSS 
+charger_css("styles.css")
 
 
 # ============================================================
@@ -408,7 +412,6 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
 # 1) ONGLET : ÉVOLUTION GLOBALE ACP/ACH
 # =========================================================
 with tab1:
-
     # -----------------------------------------------------
     # Titre principal
     # -----------------------------------------------------
@@ -552,7 +555,9 @@ with tab1:
         ax1.spines[spine].set_visible(False)
 
     plt.tight_layout()
-
+    # 🔽 Bouton de téléchargement PNG/PDF pour le graphique des volumes
+    nom_base = f"Evolution_volumes_ACPACH_{annee1}_{annee2}"
+    telecharger_graphique(fig1, nom_base, key=f"glob_graph_volumes_{annee1}_{annee2}")
     st.pyplot(fig1)
 
     # =====================================================
@@ -608,7 +613,9 @@ with tab1:
         ax2.spines[spine].set_visible(False)
 
     plt.tight_layout()
-
+    # 🔽 Bouton de téléchargement PNG/PDF pour le graphique des valeurs
+    nom_base = f"Evolution_valeurs_ACPACH_{annee1}_{annee2}"
+    telecharger_graphique(fig2, nom_base, key=f"glob_graph_valeurs_{annee1}_{annee2}")
     st.pyplot(fig2)
 
 
@@ -762,6 +769,8 @@ with tab2:
             ax.text(v + 0.3, i, f"{v:.2f}%", va="center", fontsize=8)
 
         plt.tight_layout()
+        nom_base = f"Parts_de_marche_{choix}_barres"
+        telecharger_graphique(fig, nom_base, key=f"pm_barres_{choix}") 
         st.pyplot(fig)
 
     # =====================================================
@@ -791,10 +800,8 @@ with tab2:
 
         plt.title(f"Concentration des parts de marché ({choix} en valeur)", fontweight="bold")
         plt.tight_layout()
+        # 🔽 Bouton de téléchargement PNG/PDF pour le graphique Barres horizontales
         st.pyplot(fig)
-
-
-
 
 # =========================================================
 # 3) ONGLET : REJETS (IMPAYÉS)
@@ -806,162 +813,94 @@ with tab3:
     # -------------------------------------
     # LECTURE DE LA FEUILLE REJETS
     # -------------------------------------
-    # Lecture du fichier Excel (feuille "Rejets Impayés")
     df_rejets_impayes = pd.read_excel(uploaded_file, sheet_name="Rejets Impayés")
-
-    # Suppression des colonnes vides (souvent créées par Excel)
     df_rejets_impayes = df_rejets_impayes.dropna(axis=1, how="all")
 
-    # Renommage des colonnes pour plus de clarté
     df_rejets_impayes.columns = [
-        "Instrument",        # Type d’instrument (Chèques, Virements…)
-        "Volume_Nombre",     # Nombre de rejets en volume
-        "Volume_Taux",       # Taux de rejets en volume
-        "Valeur_Nombre",     # Montant des rejets en valeur
-        "Valeur_Taux"        # Taux de rejets en valeur
+        "Instrument",
+        "Volume_Nombre",
+        "Volume_Taux",
+        "Valeur_Nombre",
+        "Valeur_Taux"
     ]
 
     # -------------------------------------
-    # NETTOYAGE DES TAUX (ex: "4,93%" → 4.93)
+    # NETTOYAGE DES TAUX
     # -------------------------------------
     for col in ["Volume_Taux", "Valeur_Taux"]:
-        df_rejets_impayes[col] = df_rejets_impayes[col].astype(str)              # Conversion en texte
-        df_rejets_impayes[col] = df_rejets_impayes[col].str.replace("%", "")     # Suppression du symbole %
-        df_rejets_impayes[col] = df_rejets_impayes[col].str.replace(",", ".")    # Remplacement virgule → point
-        df_rejets_impayes[col] = pd.to_numeric(df_rejets_impayes[col], errors="coerce")  # Conversion en nombre
+        df_rejets_impayes[col] = (
+            df_rejets_impayes[col]
+            .astype(str)
+            .str.replace("%", "")
+            .str.replace(",", ".")
+        )
+        df_rejets_impayes[col] = pd.to_numeric(df_rejets_impayes[col], errors="coerce")
 
     # -------------------------------------
-    # AFFICHAGE DU TABLEAU NETTOYÉ
+    # AFFICHAGE DU TABLEAU
     # -------------------------------------
     st.subheader("Tableau des rejets par instrument")
     df_affichage = format_dataframe(df_rejets_impayes)
     st.dataframe(df_affichage)
 
     # -------------------------------------
-    # CHOIX DU TYPE DE GRAPHIQUE
+    # VISUEL : BARRES GROUPÉES
     # -------------------------------------
-    type_graph = st.selectbox("Type de visuel :", ["Barres groupées", "Lignes comparatives"])
-
-    # Filtrage : on garde uniquement les instruments Chèques et Virements
     df_comparaison = df_rejets_impayes[df_rejets_impayes["Instrument"].isin(["Chèques", "Virements"])]
 
-    # Extraction des instruments pour l’axe X
     instruments = df_comparaison["Instrument"]
-    x = np.arange(len(instruments))  # Positions X (0, 1)
-    largeur = 0.35                   # Largeur des barres
+    x = np.arange(len(instruments))
+    largeur = 0.35
 
-        # =====================================================
-    # 🔹 VISUEL 1 : BARRES GROUPÉES AVEC ANNOTATIONS
-    # =====================================================
-    if type_graph == "Barres groupées":
-        # Si l’utilisateur choisit l’option "Barres groupées", on affiche ce graphique
+    fig, ax = plt.subplots(figsize=(6, 3.5))
 
-        fig, ax = plt.subplots(figsize=(6, 3.5))
-        # Création de la figure et de l’axe pour le graphique (taille 6x3.5)
+    # Barres Volume
+    ax.bar(
+        x - largeur/2,
+        df_comparaison["Volume_Taux"],
+        largeur,
+        label="Taux de Rejets en Volume",
+        color="#1F77B4"
+    )
 
-        # Barres pour les taux en volume (bleu)
-        ax.bar(
-            x - largeur/2,                         # Position des barres légèrement à gauche
-            df_comparaison["Volume_Taux"],         # Valeurs des taux en volume
-            largeur,                                # Largeur des barres
-            label="Taux de Rejets en Volume",       # Légende
-            color="#1F77B4"                         # Couleur bleue
+    # Barres Valeur
+    ax.bar(
+        x + largeur/2,
+        df_comparaison["Valeur_Taux"],
+        largeur,
+        label="Taux de Rejets en Valeur",
+        color="#F39C12"
+    )
+
+    # 🔹 Annotations
+    for i in range(len(instruments)):
+        ax.text(
+            x[i] - largeur/2,
+            df_comparaison["Volume_Taux"].iloc[i] + 0.001,
+            f"{df_comparaison['Volume_Taux'].iloc[i]*100:.2f}%",
+            ha="center", fontsize=8
+        )
+        ax.text(
+            x[i] + largeur/2,
+            df_comparaison["Valeur_Taux"].iloc[i] + 0.001,
+            f"{df_comparaison['Valeur_Taux'].iloc[i]*100:.2f}%",
+            ha="center", fontsize=8
         )
 
-        # Barres pour les taux en valeur (orange)
-        ax.bar(
-            x + largeur/2,                         # Position des barres légèrement à droite
-            df_comparaison["Valeur_Taux"],         # Valeurs des taux en valeur
-            largeur,                                # Largeur des barres
-            label="Taux de Rejets en Valeur",       # Légende
-            color="#F39C12"                         # Couleur orange
-        )
+    ax.set_xticks(x)
+    ax.set_xticklabels(instruments)
+    ax.set_ylabel("Taux (%)")
+    ax.set_title("Comparaison des taux de rejets : Chèques vs Virements", fontweight="bold")
 
-        # 🔹 Ajout des annotations au-dessus des barres
-        for i in range(len(instruments)):
-            # Annotation pour le taux en volume
-            ax.text(
-                x[i] - largeur/2,                                   # Position horizontale
-                df_comparaison["Volume_Taux"].iloc[i] + 0.001,      # Position verticale légèrement au-dessus de la barre
-                f"{df_comparaison['Volume_Taux'].iloc[i]*100:.2f}%",# Texte affiché (en %)
-                ha="center", fontsize=8
-            )
+    ax.legend(frameon=True, edgecolor="black", facecolor="white")
+    ax.set_facecolor("#F8F9F9")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
 
-            # Annotation pour le taux en valeur
-            ax.text(
-                x[i] + largeur/2,
-                df_comparaison["Valeur_Taux"].iloc[i] + 0.001,
-                f"{df_comparaison['Valeur_Taux'].iloc[i]*100:.2f}%",
-                ha="center", fontsize=8
-            )
-
-        # Configuration des axes
-        ax.set_xticks(x)                     # Position des étiquettes sur l’axe X
-        ax.set_xticklabels(instruments)      # Noms des instruments (Chèques, Virements)
-        ax.set_ylabel("Taux (%)")            # Label de l’axe Y
-        ax.set_title(
-            "Comparaison des taux de rejets : Chèques vs Virements",
-            fontweight="bold"
-        )                                     # Titre du graphique
-
-        # Légende encadrée
-        ax.legend(
-            frameon=True, edgecolor="black", facecolor="white"
-        )                                     # Légende avec cadre visible
-
-        # Nettoyage visuel
-        ax.set_facecolor("#F8F9F9")           # Fond clair
-        ax.spines["top"].set_visible(False)   # Suppression de la bordure supérieure
-        ax.spines["right"].set_visible(False) # Suppression de la bordure droite
-
-        plt.tight_layout()                    # Ajustement automatique des marges
-        st.pyplot(fig)                        # Affichage du graphique dans Streamlit
-
-    # =====================================================
-    # 🔹 VISUEL 2 : LIGNES COMPARATIVES (ÉVOLUTION VISUELLE)
-    # =====================================================
-    else:
-        # Si l’utilisateur choisit un autre type de graphique, on affiche les lignes comparatives
-
-        fig, ax = plt.subplots(figsize=(6, 3.5))
-        # Création de la figure et de l’axe
-
-        # Ligne bleue pour les taux en volume
-        ax.plot(
-            instruments,                           # Axe X : instruments
-            df_comparaison["Volume_Taux"] * 100,   # Axe Y : taux en %
-            marker="o",                             # Marqueurs ronds
-            color="#1F77B4",                        # Couleur bleue
-            label="Taux de Rejets en Volume"        # Légende
-        )
-
-        # Ligne orange pour les taux en valeur
-        ax.plot(
-            instruments,
-            df_comparaison["Valeur_Taux"] * 100,
-            marker="o",
-            color="#F39C12",
-            label="Taux de Rejets en Valeur"
-        )
-
-        # Configuration des axes
-        ax.set_ylabel("Taux (%)")                  # Label axe Y
-        ax.set_title(
-            "Évolution comparative des taux de rejets",
-            fontweight="bold"
-        )                                          # Titre du graphique
-
-        # Légende encadrée
-        ax.legend(
-            frameon=True, edgecolor="black", facecolor="white"
-        )                                          # Légende avec cadre
-
-        # Grille légère pour lisibilité
-        ax.grid(alpha=0.3)                         # Grille discrète (alpha = transparence)
-
-        plt.tight_layout()                         # Ajustement des marges
-        st.pyplot(fig)                             # Affichage du graphique
-
+    plt.tight_layout()
+    nom_base = "Rejets_barres_groupees"
+    telecharger_graphique(fig, nom_base, key="le graphique des rejets")
+    st.pyplot(fig)
 
 # =========================================================
 # 4) MATRICE DE POSITIONNEMENT DES BANQUES (ACP/ACH)
@@ -987,7 +926,7 @@ with tab4:
     df_banque = df_banque[df_banque["Banque"].notna()]
     df_banque = df_banque[df_banque["Banque"].astype(str).str.strip() != ""]
 
-        # -----------------------------------------------------
+    # -----------------------------------------------------
     # 2) NETTOYAGE DES VALEURS
     # -----------------------------------------------------
     for col in ["Total_Nombre", "Total_Montant"]:
@@ -1053,10 +992,9 @@ with tab4:
     )
 
     plt.tight_layout()
+    nom_base = "Matrice_Positionnement"
+    telecharger_graphique(fig, nom_base, key="matrice_de_positionnement")
     st.pyplot(fig)
-
-
-    
 
 #=======================================
 # Évolution globale des opérations du RTGS
@@ -1065,8 +1003,6 @@ with tab5:
 
     # Titre principal de la section RTGS
     st.header("Analyse du Système RTGS")
-
-   
 
     # -----------------------------------------------------
     # 1) LECTURE DES FEUILLES
@@ -1173,10 +1109,11 @@ with tab5:
     # Mise en forme
     plt.xticks(rotation=60, ha='right', fontsize=8)
     plt.title(f"Dynamique Mensuelle du RTGS en {annee_B}")
-
+    nom_base = "Dynamique Mensuelle du RTGS en Réalisations 2025 : Volume vs Valeur"
+    telecharger_graphique(fig, nom_base, key="")
     st.pyplot(fig)
     
-        # -----------------------------------------------------
+    # -----------------------------------------------------
     # 9) COURBES SUPERPOSÉES : VOLUME 2024 vs 2025
     # -----------------------------------------------------
     st.subheader(f"Comparaison des Volumes RTGS : {annee_A} vs {annee_B}")
@@ -1208,10 +1145,9 @@ with tab5:
     ax.set_title(f"Tendance des Volumes RTGS : {annee_A} vs {annee_B}")
     ax.legend()
     plt.xticks(rotation=60, ha='right')
-
+    nom_base = "Tendance des Volumes RTGS : {annee_A} vs {annee_B}"
+    telecharger_graphique(fig, nom_base, key="Tendance des Volumes RTGS")
     st.pyplot(fig3)
-    
-    
     
     # -----------------------------------------------------
     # 10) COURBES SUPERPOSÉES : MONTANTS 2024 vs 2025
@@ -1245,12 +1181,11 @@ with tab5:
     ax.set_title(f"Tendance des Montants RTGS : {annee_A} vs {annee_B}")
     ax.legend()
     plt.xticks(rotation=60, ha='right')
-
+    nom_base = "Tendance des Montants RTGS"
+    telecharger_graphique(fig, nom_base, key="Tendance des Montants RTGS")
     st.pyplot(fig4)
 
     
-
-
 # =========================================================
 # 6) RÉPARTITION DES RÈGLEMENTS RTGS PAR DEVISE
 # =========================================================    
@@ -1390,14 +1325,15 @@ with tab6:
     )
 
     plt.title(f"Répartition des Règlements RTGS par Devise (en Valeur) – {annee}")
-    st.pyplot(fig)                             # Affichage final du graphique
+    nom_base = "Répartition des Règlements RTGS par Devise"
+    telecharger_graphique(fig, nom_base, key="Répartition des Règlements RTGS par Devise")   
+    st.pyplot(fig) # Affichage final du graphique
 
 
 # =========================================================
 # 7) ONGLET : CONTRIBUTION DES BANQUES AU SNP
 # =========================================================
 with tab7:
-    # On ouvre le 7ᵉ onglet de l’application Streamlit
 
     st.header("Contribution des Banques au Système National de Paiement (SNP)")
     # Titre principal affiché en haut de l’onglet
@@ -1508,7 +1444,9 @@ with tab7:
     # Ajoute la valeur en millions à droite de chaque barre
 
     plt.tight_layout()
-    st.pyplot(fig)                             # Affichage du graphique
+    nom_base="Classement des contributions au SNP"
+    telecharger_graphique(fig, nom_base, key="Classement des contributions au SNP")
+    st.pyplot(fig)# Affichage du graphique
 
     # -----------------------------------------------------
     # 7) ANALYSE AUTOMATIQUE
