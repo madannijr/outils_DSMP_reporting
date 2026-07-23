@@ -1,42 +1,55 @@
 /* ============================================================
-   ONGlets Streamlit - Compatible local et Streamlit Cloud
+   ONGlets Streamlit - Local + Streamlit Cloud
    ============================================================ */
 
-.stTabs [data-baseweb="tab"] {
-    font-size: 15px !important;
+/* Conteneur des onglets */
+div[data-testid="stTabs"] {
+    width: 100% !important;
+}
+
+/* Chaque onglet */
+div[data-testid="stTabs"] button[role="tab"] {
+    font-size: 13px !important;
     font-weight: 600 !important;
     color: white !important;
     background-color: #00695c !important;
     border-radius: 5px !important;
-    padding: 8px 12px !important;
-    margin-right: 6px !important;
+    padding: 6px 10px !important;
+    margin-right: 5px !important;
     border: none !important;
+    min-height: 35px !important;
+}
+
+/* Texte à l'intérieur */
+div[data-testid="stTabs"] button[role="tab"] p {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: white !important;
+    margin: 0 !important;
 }
 
 /* Survol */
-.stTabs [data-baseweb="tab"]:hover {
+div[data-testid="stTabs"] button[role="tab"]:hover {
     background-color: #004d40 !important;
     color: white !important;
 }
 
 /* Onglet sélectionné */
-.stTabs [data-baseweb="tab"][aria-selected="true"] {
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
     background-color: #004d40 !important;
     color: white !important;
-    border-bottom: 3px solid #e74c3c !important;
 }
 
-/* Texte à l'intérieur de l'onglet */
-.stTabs [data-baseweb="tab"] p {
+/* Texte de l'onglet sélectionné */
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] p {
     color: white !important;
-    font-weight: 600 !important;
 }
 
-/* Ligne sous les onglets */
-.stTabs [data-baseweb="tab-highlight"] {
+/* Barre/indicateur de l'onglet sélectionné */
+div[data-testid="stTabs"] div[data-baseweb="tab-highlight"] {
     background-color: #e74c3c !important;
+    height: 3px !important;
 }
-
 
 /* ============================================================
    RÉDUCTION DE LA TAILLE GÉNÉRALE

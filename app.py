@@ -9,10 +9,10 @@ from analyse_trimestrielle import analyse_trimestrielle
 from analyse_semestrielle import analyse_semestrielle
 from modeles_trimestres import telecharger_modele_trimestre
 from utils import telecharger_graphique
-from utils import charger_css
+#from utils import charger_css
 
 # Charger le CSS 
-charger_css("styles.css")
+#charger_css("styles.css")
 
 
 # ============================================================
@@ -86,7 +86,31 @@ st.markdown("""
 # ============================================================
 # 🔹 CSS PERSONNALISÉ
 # ============================================================
-
+st.markdown("""
+<style>
+h1, h2, h3 {
+    color: #0b3d2e;
+    font-weight: 700;
+}
+p, label, span {
+    font-size: 15px !important;
+}
+.stTabs [data-baseweb="tab"] {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: #00695c;
+    border-radius: 5px;
+    padding: 8px 12px;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    background-color: #004d40;
+}
+.dataframe {
+    font-size: 14px;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ============================================================
 # 🔹 TITRE PRINCIPAL
